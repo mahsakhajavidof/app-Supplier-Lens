@@ -60,3 +60,36 @@
 - Commit: `53401c8` (squash-merged as `ace9a07`).
 - Pull request: #2, merged into `main`.
 - Merge: done.
+
+## 2026-08-06 — Sync local workspace files with merged main
+
+### Summary
+
+- Found the local workspace's copies of `worklog.md` and `README.md` had drifted
+  from what was already merged on GitHub `main` — those two files had been edited
+  directly in an isolated publish clone (kept separate from this workspace to
+  avoid disrupting concurrent edits from another agent) and never synced back.
+- Brought the local `README.md` up to date with the merged "Project layout"
+  section (documents `API/` and `reference-prototype/`, which exist in the
+  published repo but were not reflected here).
+- The local `API/` folder itself was intentionally left as-is, per the user's
+  instruction, and is not part of this sync.
+- No corresponding change was pushed to GitHub for this entry — `README.md` on
+  `main` already had this content from PR #1; only the local copy needed updating.
+
+### Files changed
+
+- `README.md` (local workspace only).
+- `worklog.md` (this entry).
+
+### Tests and validation
+
+- No automated test required — documentation-only change (per rule 5).
+- No build/type-check impact — no source files touched.
+
+### Delivery
+
+- Commit: none required — GitHub `main` already had the correct `README.md`
+  content from PR #1; this was a local-workspace-only file sync.
+- Pull request: none.
+- Merge: n/a.
