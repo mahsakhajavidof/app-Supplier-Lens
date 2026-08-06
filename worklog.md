@@ -117,6 +117,6 @@
 
 ### Delivery
 
-- Commit: pending.
-- Pull request: pending.
-- Merge: pending.
+- Commit: `6b18305` + `8d33f30` (squash-merged as `a4968e2`).
+- Pull request: #5, merged into `main`.
+- Merge: done.
