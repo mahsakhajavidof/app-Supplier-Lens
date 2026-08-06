@@ -30,6 +30,33 @@
 
 ### Delivery
 
+- Commit: `533249a` (squash-merged as `a484131`).
+- Pull request: #1, merged into `main`.
+- Merge: done.
+
+## 2026-08-06 — Mandatory implementation rules policy
+
+### Summary
+
+- Added `CLAUDE.md` at the repository root recording the standing implementation
+  rules the user requested for all future code changes: 250-line file-size cap,
+  scope discipline (implement only what's requested), a worklog entry per change,
+  automated-test coverage for every functional change, and a validate-then-commit
+  -push-PR-merge workflow with no bypassing of failing checks or branch protection.
+- Documentation-only change; no source code was modified.
+
+### Files changed
+
+- `CLAUDE.md` (new).
+- `worklog.md` (this entry).
+
+### Tests and validation
+
+- No automated test required — documentation-only change (per rule 5).
+- No build/type-check impact — no source files touched.
+
+### Delivery
+
 - Commit: pending.
 - Pull request: pending.
 - Merge: pending.
