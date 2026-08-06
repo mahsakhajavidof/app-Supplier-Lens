@@ -23,7 +23,6 @@ from the "Leverandørsyn" design.
 ```
 backend/               Express API + SQLite database (Drizzle ORM)
 frontend/               React app (Vite)
-API/openapi.json         Brønnøysundregistrene's OpenAPI spec, for reference
 reference-prototype/     Original static HTML/JS mockup this app was built from
 ```
 

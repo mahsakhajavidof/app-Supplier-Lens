@@ -93,3 +93,30 @@
   content from PR #1; this was a local-workspace-only file sync.
 - Pull request: none.
 - Merge: n/a.
+
+## 2026-08-06 — Remove API/ folder
+
+### Summary
+
+- Removed `API/openapi.json` from the repository at the user's request, to match
+  its already-deleted state in the local development workspace.
+- Updated the README's "Project layout" section to drop the `API/` row.
+
+### Files changed
+
+- `API/openapi.json` (deleted).
+- `README.md`.
+- `worklog.md` (this entry).
+
+### Tests and validation
+
+- No automated test required — deletion of a reference-only static file plus a
+  documentation update (per rule 5).
+- Backend TypeScript build: passed.
+- Frontend TypeScript build and Vite production build: passed.
+
+### Delivery
+
+- Commit: pending.
+- Pull request: pending.
+- Merge: pending.
