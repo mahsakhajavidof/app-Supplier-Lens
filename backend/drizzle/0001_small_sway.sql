@@ -1,0 +1,1 @@
+ALTER TABLE `financial_years` ADD `currency` text;

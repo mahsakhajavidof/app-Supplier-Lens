@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Instrument Sans", Helvetica, Arial, sans-serif; background: #FFFFFF; color: #243746; -webkit-font-smoothing: antialiased; }
+  a { color: #1F4F6F; text-decoration: none; }
+  a:hover { color: #4A9FD1; }
+  button { font-family: inherit; }
+  input, select { font-family: inherit; }
+  ::placeholder { color: #96A5B0; }
+  @keyframes dcspin { to { transform: rotate(360deg); } }
+  @keyframes dcrise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</helmet>
+
+<div style="display: flex; min-height: 100vh; background: #FFFFFF;">
+
+  <aside style="width: 248px; flex: 0 0 248px; border-right: 1px solid #DCE7EE; background: #FFFFFF; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;">
+    <div style="padding: 24px 20px 18px 20px; display: flex; align-items: center; gap: 10px;">
+      <div style="width: 30px; height: 30px; border-radius: 9px; background: #EAF5FC; border: 1px solid #DCE7EE; display: flex; align-items: center; justify-content: center;">
+        <div style="width: 11px; height: 11px; border: 2px solid #4A9FD1; border-radius: 3px;"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: #1F4F6F;">Leverandørsyn</span>
+        <span style="font-size: 11px; color: #6B7C89;">Subcontractor monitoring</span>
+      </div>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 2px; padding: 6px 12px;">
+      <sc-for list="{{ navItems }}" as="nav" hint-placeholder-count="6">
+        <button onClick="{{ nav.go }}" style="display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 10px; border-radius: 9px; border: none; cursor: pointer; font-size: 13.5px; background: {{ nav.bg }}; color: {{ nav.fg }}; font-weight: {{ nav.weight }};">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ nav.fg }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex: 0 0 17px;">
+            <path d="{{ nav.icon }}"></path>
+          </svg>
+          <span style="flex: 1;">{{ nav.label }}</span>
+          <sc-if value="{{ nav.badge }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size: 11px; font-weight: 600; color: #1F4F6F; background: #DCEFFA; border-radius: 20px; padding: 1px 7px;">{{ nav.badge }}</span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top: auto; padding: 14px; border-top: 1px solid #DCE7EE;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; background: #F4F9FD;">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #DCEFFA; color: #1F4F6F; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center;">MS</div>
+        <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+          <span style="font-size: 12.5px; font-weight: 600; color: #243746;">Marte Solberg</span>
+          <span style="font-size: 11px; color: #6B7C89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nordbygg Entreprenør AS</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; background: #FFFFFF;">
+
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width: 1280px; margin: 0 auto; padding: 40px 40px 64px 40px;">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <h1 style="margin: 0; font-size: 27px; font-weight: 600; letter-spacing: -0.02em; color: #243746;">Subcontractor Monitoring</h1>
+            <p style="margin: 0; font-size: 14.5px; color: #6B7C89; max-width: 620px; text-wrap: pretty;">Monitor relevant organisational, financial and operational changes across your subcontractors.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 12.5px; color: #6B7C89;">Last data update 03 Aug 2026, 06:15</span>
+            <button onClick="{{ refresh }}" style="display: flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 13px; font-weight: 500; cursor: pointer;">{{ refreshLabel }}</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 32px;">
+          <sc-for list="{{ summaryCards }}" as="card" hint-placeholder-count="4">
+            <div style="background: #EAF5FC; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                <span style="font-size: 12.5px; font-weight: 500; color: #1F4F6F;">{{ card.label }}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A9FD1" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ card.icon }}"></path></svg>
+              </div>
+              <div style="font-size: 34px; font-weight: 600; letter-spacing: -0.03em; color: #243746; line-height: 1;">{{ card.value }}</div>
+              <div style="font-size: 12px; color: #6B7C89; margin-top: 9px;">{{ card.note }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <section style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; margin-bottom: 28px; overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #DCE7EE;">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <h2 style="margin: 0; font-size: 16px; font-weight: 600; color: #243746;">Recent changes</h2>
+              <span style="font-size: 12.5px; color: #6B7C89;">Detected in the last 30 days across all monitored subcontractors</span>
+            </div>
+            <button onClick="{{ goChanges }}" style="padding: 8px 14px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 13px; font-weight: 500; cursor: pointer;">View all changes</button>
+          </div>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: #F4F9FD;">
+                  <th style="text-align: left; padding: 11px 22px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89; white-space: nowrap;">Subcontractor</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89; white-space: nowrap;">Type of change</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89; white-space: nowrap;">Detected</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89; white-space: nowrap;">Attention level</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89; white-space: nowrap;">Follow-up</th>
+                  <th style="text-align: left; padding: 11px 22px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89; white-space: nowrap;">Assigned</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ recentChanges }}" as="row" hint-placeholder-count="7">
+                  <tr onClick="{{ row.open }}" style="border-top: 1px solid #DCE7EE; cursor: pointer;" style-hover="background: #F4F9FD;">
+                    <td style="padding: 13px 22px; color: #243746; font-weight: 500; white-space: nowrap;">{{ row.company }}</td>
+                    <td style="padding: 13px 14px; color: #243746;">{{ row.type }}</td>
+                    <td style="padding: 13px 14px; color: #6B7C89; white-space: nowrap;">{{ row.date }}</td>
+                    <td style="padding: 13px 14px;">
+                      <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ row.attnBg }}; color: {{ row.attnFg }};">{{ row.attn }}</span>
+                    </td>
+                    <td style="padding: 13px 14px; color: #6B7C89; white-space: nowrap;">{{ row.followUp }}</td>
+                    <td style="padding: 13px 22px; color: #6B7C89; white-space: nowrap;">{{ row.owner }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <h2 style="margin: 0; font-size: 16px; font-weight: 600; color: #243746;">Subcontractors requiring review</h2>
+              <span style="font-size: 12.5px; color: #6B7C89;">Recent or unresolved changes. Review and decision remain with the assigned employee.</span>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+            <sc-for list="{{ reviewCards }}" as="c" hint-placeholder-count="3">
+              <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+                  <div style="display: flex; flex-direction: column; gap: 3px;">
+                    <span style="font-size: 15px; font-weight: 600; color: #243746;">{{ c.company }}</span>
+                    <span style="font-size: 12px; color: #6B7C89; font-variant-numeric: tabular-nums;">Org. no. {{ c.orgNr }}</span>
+                  </div>
+                  <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ c.attnBg }}; color: {{ c.attnFg }};">{{ c.attn }}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 9px; padding: 14px; border-radius: 11px; background: #F4F9FD;">
+                  <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px;">
+                    <span style="color: #6B7C89;">New events</span>
+                    <span style="color: #243746; font-weight: 500;">{{ c.events }}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px;">
+                    <span style="color: #6B7C89;">Latest change</span>
+                    <span style="color: #243746; font-weight: 500; text-align: right;">{{ c.latest }}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px;">
+                    <span style="color: #6B7C89;">Assigned</span>
+                    <span style="color: #243746; font-weight: 500;">{{ c.owner }}</span>
+                  </div>
+                </div>
+                <button onClick="{{ c.open }}" style="width: 100%; padding: 10px; border-radius: 9px; border: none; background: #4A9FD1; color: #FFFFFF; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #3D8DBD;">Review changes</button>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width: 1280px; margin: 0 auto; padding: 40px 40px 64px 40px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+          <h1 style="margin: 0; font-size: 27px; font-weight: 600; letter-spacing: -0.02em;">Subcontractors</h1>
+          <p style="margin: 0; font-size: 14.5px; color: #6B7C89;">{{ listCountLabel }}</p>
+        </div>
+
+        <div style="background: #F4F9FD; border: 1px solid #DCE7EE; border-radius: 14px; padding: 16px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+          <div style="position: relative; flex: 1 1 320px; min-width: 260px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#96A5B0" stroke-width="1.8" stroke-linecap="round" style="position: absolute; left: 12px; top: 11px;"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+            <input value="{{ search }}" onChange="{{ onSearch }}" placeholder="Search by company name or organisation number" style="width: 100%; padding: 10px 12px 10px 36px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746; outline: none;" />
+          </div>
+          <select value="{{ fCategory }}" onChange="{{ onCategory }}" style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746;">
+            <sc-for list="{{ categoryOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+          </select>
+          <select value="{{ fOwner }}" onChange="{{ onOwner }}" style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746;">
+            <sc-for list="{{ ownerOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+          </select>
+          <select value="{{ fEvent }}" onChange="{{ onEvent }}" style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746;">
+            <sc-for list="{{ eventOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+          </select>
+          <select value="{{ fStatus }}" onChange="{{ onStatus }}" style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746;">
+            <sc-for list="{{ statusOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+          </select>
+          <select value="{{ fRange }}" onChange="{{ onRange }}" style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746;">
+            <sc-for list="{{ rangeOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+          </select>
+          <button onClick="{{ resetFilters }}" style="padding: 10px 14px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #6B7C89; font-size: 13px; cursor: pointer;">Reset</button>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; overflow: hidden;">
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: #F4F9FD;">
+                  <th style="text-align: left; padding: 11px 22px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Company</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Org. no.</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Category</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Internal owner</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Latest change</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">New events</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Follow-up</th>
+                  <th style="text-align: left; padding: 11px 22px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Last checked</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ filteredCompanies }}" as="row" hint-placeholder-count="8">
+                  <tr onClick="{{ row.open }}" style="border-top: 1px solid #DCE7EE; cursor: pointer;" style-hover="background: #F4F9FD;">
+                    <td style="padding: 13px 22px; font-weight: 500; white-space: nowrap;">{{ row.company }}</td>
+                    <td style="padding: 13px 14px; color: #6B7C89; font-variant-numeric: tabular-nums; white-space: nowrap;">{{ row.orgNr }}</td>
+                    <td style="padding: 13px 14px; color: #243746; white-space: nowrap;">{{ row.category }}</td>
+                    <td style="padding: 13px 14px; color: #6B7C89; white-space: nowrap;">{{ row.owner }}</td>
+                    <td style="padding: 13px 14px; color: #243746;">{{ row.latest }}</td>
+                    <td style="padding: 13px 14px;">
+                      <span style="display: inline-block; min-width: 22px; text-align: center; font-size: 11.5px; font-weight: 600; padding: 3px 8px; border-radius: 20px; background: {{ row.eventsBg }}; color: {{ row.eventsFg }};">{{ row.events }}</span>
+                    </td>
+                    <td style="padding: 13px 14px;">
+                      <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ row.statusBg }}; color: {{ row.statusFg }};">{{ row.status }}</span>
+                    </td>
+                    <td style="padding: 13px 22px; color: #6B7C89; white-space: nowrap;">{{ row.checked }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 56px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: #EAF5FC; border: 1px solid #DCE7EE; display: flex; align-items: center; justify-content: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A9FD1" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+              </div>
+              <span style="font-size: 15px; font-weight: 600; color: #243746;">No subcontractors match these filters</span>
+              <span style="font-size: 13px; color: #6B7C89; max-width: 340px; text-wrap: pretty;">Try a different search term, or reset the filters to see all monitored subcontractors.</span>
+              <button onClick="{{ resetFilters }}" style="margin-top: 6px; padding: 9px 16px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 13px; font-weight: 500; cursor: pointer;">Reset filters</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="background: #F4F9FD; border-bottom: 1px solid #DCE7EE;">
+          <div style="max-width: 1280px; margin: 0 auto; padding: 24px 40px 0 40px;">
+            <button onClick="{{ goList }}" style="display: flex; align-items: center; gap: 6px; padding: 0; border: none; background: transparent; color: #6B7C89; font-size: 12.5px; cursor: pointer; margin-bottom: 16px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7C89" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"></path></svg>
+              All subcontractors
+            </button>
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; flex-wrap: wrap;">
+              <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em;">{{ sel.company }}</h1>
+                  <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; background: #DCEFFA; color: #1F4F6F;">{{ sel.companyStatus }}</span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0 28px; font-size: 12.5px;">
+                  <div style="display: flex; flex-direction: column; gap: 3px; padding: 4px 0;">
+                    <span style="color: #6B7C89;">Organisation number</span>
+                    <span style="color: #243746; font-weight: 500; font-variant-numeric: tabular-nums;">{{ sel.orgNr }}</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 3px; padding: 4px 0;">
+                    <span style="color: #6B7C89;">Main contact</span>
+                    <span style="color: #243746; font-weight: 500;">{{ sel.contact }}</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 3px; padding: 4px 0;">
+                    <span style="color: #6B7C89;">Internal responsible</span>
+                    <span style="color: #243746; font-weight: 500;">{{ sel.owner }}</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 3px; padding: 4px 0;">
+                    <span style="color: #6B7C89;">Last data update</span>
+                    <span style="color: #243746; font-weight: 500;">{{ sel.updated }}</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px;">
+                <button onClick="{{ openNote }}" style="padding: 9px 14px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 13px; font-weight: 500; cursor: pointer;">Add note</button>
+                <button onClick="{{ openTask }}" style="padding: 9px 14px; border-radius: 9px; border: none; background: #4A9FD1; color: #FFFFFF; font-size: 13px; font-weight: 600; cursor: pointer;" style-hover="background: #3D8DBD;">Create follow-up task</button>
+                <button onClick="{{ toastUpload }}" style="padding: 9px 14px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 13px; font-weight: 500; cursor: pointer;">Upload document</button>
+                <button onClick="{{ toastExport }}" style="padding: 9px 14px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 13px; font-weight: 500; cursor: pointer;">Export report</button>
+              </div>
+            </div>
+            <div style="display: flex; gap: 4px; margin-top: 22px; overflow-x: auto;">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="7">
+                <button onClick="{{ t.go }}" style="padding: 10px 14px; border: none; background: transparent; cursor: pointer; font-size: 13px; white-space: nowrap; border-bottom: 2px solid {{ t.border }}; color: {{ t.fg }}; font-weight: {{ t.weight }};">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width: 1280px; margin: 0 auto; padding: 28px 40px 64px 40px;">
+
+          <sc-if value="{{ tabOverview }}" hint-placeholder-val="{{ false }}">
+            <div style="display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px;">
+              <div style="display: flex; flex-direction: column; gap: 20px;">
+                <sc-if value="{{ showAi }}" hint-placeholder-val="{{ true }}">
+                  <div style="background: #EAF5FC; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                      <div style="width: 22px; height: 22px; border-radius: 7px; background: #DCEFFA; display: flex; align-items: center; justify-content: center;">
+                        <div style="width: 7px; height: 7px; background: #4A9FD1; transform: rotate(45deg);"></div>
+                      </div>
+                      <span style="font-size: 13px; font-weight: 600; color: #1F4F6F;">Summary of detected changes</span>
+                    </div>
+                    <p style="margin: 0 0 12px 0; font-size: 14px; line-height: 1.6; color: #243746; text-wrap: pretty;">{{ sel.aiSummary }}</p>
+                    <span style="font-size: 11.5px; color: #6B7C89;">AI-generated summary based on the events and sources shown below.</span>
+                  </div>
+                </sc-if>
+
+                <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; overflow: hidden;">
+                  <div style="padding: 16px 20px; border-bottom: 1px solid #DCE7EE; display: flex; align-items: center; justify-content: space-between;">
+                    <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Latest changes</h2>
+                    <button onClick="{{ goTimeline }}" style="padding: 0; border: none; background: transparent; color: #1F4F6F; font-size: 12.5px; font-weight: 500; cursor: pointer;">Open change timeline</button>
+                  </div>
+                  <sc-for list="{{ latestChanges }}" as="e" hint-placeholder-count="4">
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #DCE7EE; display: flex; align-items: center; gap: 14px;">
+                      <div style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                        <span style="font-size: 13.5px; font-weight: 500; color: #243746;">{{ e.title }}</span>
+                        <span style="font-size: 12px; color: #6B7C89;">{{ e.meta }}</span>
+                      </div>
+                      <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ e.attnBg }}; color: {{ e.attnFg }};">{{ e.attn }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; overflow: hidden;">
+                  <div style="padding: 16px 20px; border-bottom: 1px solid #DCE7EE;">
+                    <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Open follow-up activities</h2>
+                  </div>
+                  <sc-for list="{{ selTasks }}" as="t" hint-placeholder-count="2">
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #DCE7EE; display: flex; align-items: center; gap: 14px;">
+                      <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                        <span style="font-size: 13.5px; font-weight: 500;">{{ t.title }}</span>
+                        <span style="font-size: 12px; color: #6B7C89;">{{ t.meta }}</span>
+                      </div>
+                      <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ t.statusBg }}; color: {{ t.statusFg }};">{{ t.status }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                  <h2 style="margin: 0 0 14px 0; font-size: 15px; font-weight: 600;">Upcoming document expirations</h2>
+                  <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <sc-for list="{{ expirations }}" as="d" hint-placeholder-count="3">
+                      <div style="display: flex; flex-direction: column; gap: 5px; padding: 12px; border-radius: 11px; background: #F4F9FD;">
+                        <span style="font-size: 13px; font-weight: 500; color: #243746;">{{ d.name }}</span>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                          <span style="font-size: 12px; color: #6B7C89;">Valid until {{ d.until }}</span>
+                          <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 2px 8px; border-radius: 20px; white-space: nowrap; background: {{ d.bg }}; color: {{ d.fg }};">{{ d.note }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                  <h2 style="margin: 0 0 14px 0; font-size: 15px; font-weight: 600;">Key company information</h2>
+                  <div style="display: flex; flex-direction: column; gap: 0;">
+                    <sc-for list="{{ keyInfo }}" as="k" hint-placeholder-count="6">
+                      <div style="display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid #DCE7EE; font-size: 12.5px;">
+                        <span style="color: #6B7C89;">{{ k.label }}</span>
+                        <span style="color: #243746; font-weight: 500; text-align: right;">{{ k.value }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabTimeline }}" hint-placeholder-val="{{ false }}">
+            <div style="max-width: 860px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Change timeline</h2>
+                  <span style="font-size: 12.5px; color: #6B7C89;">All detected changes with source and previous value, newest first.</span>
+                </div>
+                <span style="font-size: 12.5px; color: #6B7C89;">{{ timelineCount }}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0;">
+                <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="4">
+                  <div style="display: flex; gap: 18px;">
+                    <div style="flex: 0 0 12px; display: flex; flex-direction: column; align-items: center; padding-top: 22px;">
+                      <div style="width: 11px; height: 11px; border-radius: 50%; border: 2px solid #4A9FD1; background: #FFFFFF;"></div>
+                      <div style="flex: 1; width: 1px; background: #DCE7EE;"></div>
+                    </div>
+                    <div style="flex: 1; min-width: 0; padding-bottom: 18px;">
+                      <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px;">
+                          <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 15px; font-weight: 600; color: #243746;">{{ t.title }}</span>
+                            <span style="font-size: 12px; color: #6B7C89;">Detected {{ t.detected }} · Source: {{ t.source }}</span>
+                          </div>
+                          <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ t.attnBg }}; color: {{ t.attnFg }};">{{ t.attn }}</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                          <div style="padding: 12px 14px; border-radius: 11px; background: #F4F9FD; display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 11.5px; color: #6B7C89;">Previous</span>
+                            <span style="font-size: 13px; color: #243746;">{{ t.prev }}</span>
+                          </div>
+                          <div style="padding: 12px 14px; border-radius: 11px; background: #EAF5FC; display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 11.5px; color: #6B7C89;">Current</span>
+                            <span style="font-size: 13px; color: #243746; font-weight: 500;">{{ t.current }}</span>
+                          </div>
+                        </div>
+                        <sc-if value="{{ showAi }}" hint-placeholder-val="{{ true }}">
+                          <div style="padding: 12px 14px; border-radius: 11px; border: 1px solid #DCE7EE; background: #FFFFFF; margin-bottom: 14px;">
+                            <span style="display: block; font-size: 11.5px; font-weight: 600; color: #1F4F6F; margin-bottom: 5px;">AI explanation</span>
+                            <span style="font-size: 12.5px; line-height: 1.55; color: #243746;">{{ t.ai }}</span>
+                          </div>
+                        </sc-if>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button onClick="{{ t.review }}" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 12.5px; font-weight: 500; cursor: pointer;">Mark as reviewed</button>
+                            <button onClick="{{ openNote }}" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 12.5px; font-weight: 500; cursor: pointer;">Add comment</button>
+                            <button onClick="{{ openTask }}" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 12.5px; font-weight: 500; cursor: pointer;">Create task</button>
+                            <button onClick="{{ toastSource }}" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 12.5px; font-weight: 500; cursor: pointer;">View source</button>
+                          </div>
+                          <span style="font-size: 12px; color: #6B7C89;">Follow-up: {{ t.followUp }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabCompany }}" hint-placeholder-val="{{ false }}">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px;">
+              <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                <h2 style="margin: 0 0 14px 0; font-size: 15px; font-weight: 600;">Registered information</h2>
+                <sc-for list="{{ companyInfo }}" as="k" hint-placeholder-count="8">
+                  <div style="display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid #DCE7EE; font-size: 12.5px;">
+                    <span style="color: #6B7C89;">{{ k.label }}</span>
+                    <span style="color: #243746; font-weight: 500; text-align: right;">{{ k.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                  <h2 style="margin: 0 0 14px 0; font-size: 15px; font-weight: 600;">Management and board</h2>
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <sc-for list="{{ people }}" as="p" hint-placeholder-count="4">
+                      <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 11px; background: #F4F9FD;">
+                        <div style="width: 30px; height: 30px; border-radius: 50%; background: #DCEFFA; color: #1F4F6F; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center;">{{ p.initials }}</div>
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                          <span style="font-size: 13px; font-weight: 500;">{{ p.name }}</span>
+                          <span style="font-size: 11.5px; color: #6B7C89;">{{ p.role }}</span>
+                        </div>
+                        <span style="font-size: 11.5px; color: #6B7C89;">{{ p.since }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="background: #EAF5FC; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                  <h2 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #1F4F6F;">Ownership</h2>
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <sc-for list="{{ owners }}" as="o" hint-placeholder-count="2">
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px;">
+                        <span style="color: #243746;">{{ o.name }}</span>
+                        <span style="color: #1F4F6F; font-weight: 600; font-variant-numeric: tabular-nums;">{{ o.share }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabFinance }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                  <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Reported figures</h2>
+                  <span style="font-size: 12px; color: #6B7C89;">Source: Annual accounts, Brønnøysund register</span>
+                </div>
+                <p style="margin: 0 0 18px 0; font-size: 12.5px; color: #6B7C89;">Figures are shown as reported. No score or rating is calculated by the platform.</p>
+                <div style="overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                      <tr style="background: #F4F9FD;">
+                        <th style="text-align: left; padding: 10px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Indicator</th>
+                        <th style="text-align: right; padding: 10px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">2023</th>
+                        <th style="text-align: right; padding: 10px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">2024</th>
+                        <th style="text-align: right; padding: 10px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">2025</th>
+                        <th style="text-align: left; padding: 10px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Change</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <sc-for list="{{ financials }}" as="f" hint-placeholder-count="6">
+                        <tr style="border-top: 1px solid #DCE7EE;">
+                          <td style="padding: 12px 14px; font-weight: 500;">{{ f.label }}</td>
+                          <td style="padding: 12px 14px; text-align: right; color: #6B7C89; font-variant-numeric: tabular-nums;">{{ f.y23 }}</td>
+                          <td style="padding: 12px 14px; text-align: right; color: #6B7C89; font-variant-numeric: tabular-nums;">{{ f.y24 }}</td>
+                          <td style="padding: 12px 14px; text-align: right; color: #243746; font-weight: 500; font-variant-numeric: tabular-nums;">{{ f.y25 }}</td>
+                          <td style="padding: 12px 14px; color: #6B7C89;">{{ f.change }}</td>
+                        </tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px;">
+                <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px;">
+                  <h2 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600;">Operating revenue</h2>
+                  <span style="font-size: 12px; color: #6B7C89;">MNOK, as reported</span>
+                  <div style="display: flex; align-items: flex-end; gap: 18px; height: 168px; margin-top: 22px;">
+                    <sc-for list="{{ revenueBars }}" as="b" hint-placeholder-count="4">
+                      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end;">
+                        <span style="font-size: 12px; font-weight: 600; color: #243746; font-variant-numeric: tabular-nums;">{{ b.value }}</span>
+                        <div style="width: 100%; border-radius: 8px 8px 0 0; background: {{ b.color }}; height: {{ b.height }};"></div>
+                        <span style="font-size: 11.5px; color: #6B7C89;">{{ b.year }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="background: #EAF5FC; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+                  <h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #1F4F6F;">Credit information</h2>
+                  <sc-for list="{{ creditInfo }}" as="c" hint-placeholder-count="4">
+                    <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 11px; background: #FFFFFF;">
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <span style="font-size: 12.5px; color: #6B7C89;">{{ c.label }}</span>
+                        <span style="font-size: 13px; font-weight: 600; color: #243746;">{{ c.value }}</span>
+                      </div>
+                      <span style="font-size: 11.5px; color: #6B7C89;">{{ c.note }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabDocs }}" hint-placeholder-val="{{ false }}">
+            <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; overflow: hidden;">
+              <div style="padding: 16px 20px; border-bottom: 1px solid #DCE7EE; display: flex; align-items: center; justify-content: space-between;">
+                <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Documents</h2>
+                <button onClick="{{ toastUpload }}" style="padding: 8px 14px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 13px; font-weight: 500; cursor: pointer;">Upload document</button>
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                  <tr style="background: #F4F9FD;">
+                    <th style="text-align: left; padding: 10px 20px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Document</th>
+                    <th style="text-align: left; padding: 10px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Type</th>
+                    <th style="text-align: left; padding: 10px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Uploaded</th>
+                    <th style="text-align: left; padding: 10px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Valid until</th>
+                    <th style="text-align: left; padding: 10px 20px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ documents }}" as="d" hint-placeholder-count="5">
+                    <tr style="border-top: 1px solid #DCE7EE;">
+                      <td style="padding: 12px 20px; font-weight: 500;">{{ d.name }}</td>
+                      <td style="padding: 12px 14px; color: #6B7C89;">{{ d.type }}</td>
+                      <td style="padding: 12px 14px; color: #6B7C89;">{{ d.uploaded }}</td>
+                      <td style="padding: 12px 14px; color: #243746;">{{ d.until }}</td>
+                      <td style="padding: 12px 20px;">
+                        <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ d.bg }}; color: {{ d.fg }};">{{ d.note }}</span>
+                      </td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabNotes }}" hint-placeholder-val="{{ false }}">
+            <div style="max-width: 760px; display: flex; flex-direction: column; gap: 16px;">
+              <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 18px;">
+                <textarea value="{{ noteDraft }}" onChange="{{ onNoteDraft }}" placeholder="Write an internal note. Notes are visible to your organisation only." style="width: 100%; min-height: 84px; resize: vertical; border: 1px solid #DCE7EE; border-radius: 11px; padding: 12px; font-family: inherit; font-size: 13px; color: #243746; outline: none;"></textarea>
+                <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+                  <button onClick="{{ saveNote }}" style="padding: 9px 16px; border-radius: 9px; border: none; background: #4A9FD1; color: #FFFFFF; font-size: 13px; font-weight: 600; cursor: pointer;">Save note</button>
+                </div>
+              </div>
+              <sc-for list="{{ notes }}" as="n" hint-placeholder-count="3">
+                <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 18px;">
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: #DCEFFA; color: #1F4F6F; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center;">{{ n.initials }}</div>
+                    <span style="font-size: 13px; font-weight: 600;">{{ n.author }}</span>
+                    <span style="font-size: 12px; color: #6B7C89;">{{ n.date }}</span>
+                  </div>
+                  <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: #243746; text-wrap: pretty;">{{ n.text }}</p>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabFollow }}" hint-placeholder-val="{{ false }}">
+            <div style="max-width: 900px; background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; overflow: hidden;">
+              <div style="padding: 16px 20px; border-bottom: 1px solid #DCE7EE; display: flex; align-items: center; justify-content: space-between;">
+                <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Follow-up for this subcontractor</h2>
+                <button onClick="{{ openTask }}" style="padding: 8px 14px; border-radius: 9px; border: none; background: #4A9FD1; color: #FFFFFF; font-size: 13px; font-weight: 600; cursor: pointer;">New task</button>
+              </div>
+              <sc-for list="{{ selTasks }}" as="t" hint-placeholder-count="3">
+                <div style="padding: 16px 20px; border-bottom: 1px solid #DCE7EE; display: flex; align-items: center; gap: 16px;">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-size: 13.5px; font-weight: 500;">{{ t.title }}</span>
+                    <span style="font-size: 12px; color: #6B7C89;">{{ t.meta }}</span>
+                  </div>
+                  <span style="font-size: 12px; color: #6B7C89;">Due {{ t.due }}</span>
+                  <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ t.statusBg }}; color: {{ t.statusFg }};">{{ t.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isChanges }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width: 1280px; margin: 0 auto; padding: 40px 40px 64px 40px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px;">
+          <h1 style="margin: 0; font-size: 27px; font-weight: 600; letter-spacing: -0.02em;">Changes and alerts</h1>
+          <p style="margin: 0; font-size: 14.5px; color: #6B7C89; max-width: 640px; text-wrap: pretty;">Factual changes detected from registers, financial sources and internal documents. Assessment and decisions remain with the assigned employee.</p>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+          <sc-for list="{{ changeFilters }}" as="f" hint-placeholder-count="7">
+            <button onClick="{{ f.go }}" style="padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 12.5px; border: 1px solid {{ f.border }}; background: {{ f.bg }}; color: {{ f.fg }}; font-weight: {{ f.weight }};">{{ f.label }} · {{ f.count }}</button>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+          <sc-for list="{{ filteredEvents }}" as="e" hint-placeholder-count="6">
+            <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <span style="font-size: 14.5px; font-weight: 600; color: #243746;">{{ e.type }}</span>
+                  <span style="font-size: 12.5px; color: #6B7C89;">{{ e.company }} · Org. no. {{ e.orgNr }}</span>
+                </div>
+                <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ e.attnBg }}; color: {{ e.attnFg }};">{{ e.attn }}</span>
+              </div>
+              <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: #243746; text-wrap: pretty;">{{ e.description }}</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 14px; border-radius: 11px; background: #F4F9FD; font-size: 12px;">
+                <span style="color: #6B7C89;">Detected <span style="color: #243746; font-weight: 500;">{{ e.date }}</span></span>
+                <span style="color: #6B7C89;">Source <span style="color: #243746; font-weight: 500;">{{ e.source }}</span></span>
+                <span style="color: #6B7C89;">Assigned <span style="color: #243746; font-weight: 500;">{{ e.owner }}</span></span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; background: {{ e.statusBg }}; color: {{ e.statusFg }};">{{ e.status }}</span>
+                <div style="display: flex; gap: 8px;">
+                  <button onClick="{{ e.review }}" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 12.5px; font-weight: 500; cursor: pointer;">Mark as reviewed</button>
+                  <button onClick="{{ e.open }}" style="padding: 8px 12px; border-radius: 8px; border: none; background: #EAF5FC; color: #1F4F6F; font-size: 12.5px; font-weight: 600; cursor: pointer;">Open subcontractor</button>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width: 1280px; margin: 0 auto; padding: 40px 40px 64px 40px;">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <h1 style="margin: 0; font-size: 27px; font-weight: 600; letter-spacing: -0.02em;">Follow-up tasks</h1>
+            <p style="margin: 0; font-size: 14.5px; color: #6B7C89;">Actions created from monitoring events, with owner, due date and status.</p>
+          </div>
+          <button onClick="{{ openTask }}" style="padding: 10px 16px; border-radius: 9px; border: none; background: #4A9FD1; color: #FFFFFF; font-size: 13px; font-weight: 600; cursor: pointer;">New task</button>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+          <sc-for list="{{ taskFilters }}" as="f" hint-placeholder-count="5">
+            <button onClick="{{ f.go }}" style="padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 12.5px; border: 1px solid {{ f.border }}; background: {{ f.bg }}; color: {{ f.fg }}; font-weight: {{ f.weight }};">{{ f.label }} · {{ f.count }}</button>
+          </sc-for>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; overflow: hidden;">
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: #F4F9FD;">
+                  <th style="text-align: left; padding: 11px 22px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Task</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Subcontractor</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Related event</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Assigned</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Due</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Priority</th>
+                  <th style="text-align: left; padding: 11px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Status</th>
+                  <th style="text-align: left; padding: 11px 22px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B7C89;">Comments</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ filteredTasks }}" as="t" hint-placeholder-count="6">
+                  <tr style="border-top: 1px solid #DCE7EE;">
+                    <td style="padding: 13px 22px; font-weight: 500;">{{ t.title }}</td>
+                    <td style="padding: 13px 14px; color: #243746; white-space: nowrap;">{{ t.company }}</td>
+                    <td style="padding: 13px 14px; color: #6B7C89;">{{ t.event }}</td>
+                    <td style="padding: 13px 14px; color: #6B7C89; white-space: nowrap;">{{ t.owner }}</td>
+                    <td style="padding: 13px 14px; color: #243746; white-space: nowrap;">{{ t.due }}</td>
+                    <td style="padding: 13px 14px; color: #6B7C89;">{{ t.priority }}</td>
+                    <td style="padding: 13px 14px;">
+                      <span style="display: inline-block; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: {{ t.statusBg }}; color: {{ t.statusFg }};">{{ t.status }}</span>
+                    </td>
+                    <td style="padding: 13px 22px; color: #6B7C89;">{{ t.comments }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <sc-if value="{{ tasksEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 56px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: #EAF5FC; border: 1px solid #DCE7EE;"></div>
+              <span style="font-size: 15px; font-weight: 600;">No tasks with this status</span>
+              <span style="font-size: 13px; color: #6B7C89; max-width: 320px;">Tasks created from monitoring events will appear here.</span>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReports }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width: 1280px; margin: 0 auto; padding: 40px 40px 64px 40px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+          <h1 style="margin: 0; font-size: 27px; font-weight: 600; letter-spacing: -0.02em;">Reports</h1>
+          <p style="margin: 0; font-size: 14.5px; color: #6B7C89;">Generate documentation of monitored changes and follow-up activity for a selected period.</p>
+        </div>
+
+        <div style="background: #F4F9FD; border: 1px solid #DCE7EE; border-radius: 14px; padding: 16px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+          <span style="font-size: 12.5px; color: #6B7C89;">Period</span>
+          <input type="date" value="2026-07-01" style="padding: 9px 12px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746;" />
+          <span style="font-size: 12.5px; color: #6B7C89;">to</span>
+          <input type="date" value="2026-08-03" style="padding: 9px 12px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746;" />
+          <select style="padding: 9px 12px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; font-size: 13px; color: #243746;">
+            <option>All subcontractors</option>
+            <option>Selected internal owner</option>
+            <option>Selected service category</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+          <sc-for list="{{ reports }}" as="r" hint-placeholder-count="6">
+            <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+              <div style="width: 34px; height: 34px; border-radius: 10px; background: #EAF5FC; border: 1px solid #DCE7EE; display: flex; align-items: center; justify-content: center;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4A9FD1" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 5px; flex: 1;">
+                <span style="font-size: 14.5px; font-weight: 600; color: #243746;">{{ r.title }}</span>
+                <span style="font-size: 12.5px; color: #6B7C89; line-height: 1.5; text-wrap: pretty;">{{ r.desc }}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; padding-top: 4px; border-top: 1px solid #DCE7EE;">
+                <button onClick="{{ toastPdf }}" style="flex: 1; margin-top: 12px; padding: 9px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 12.5px; font-weight: 500; cursor: pointer;">Export PDF</button>
+                <button onClick="{{ toastXls }}" style="flex: 1; margin-top: 12px; padding: 9px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #1F4F6F; font-size: 12.5px; font-weight: 500; cursor: pointer;">Export Excel</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width: 900px; margin: 0 auto; padding: 40px 40px 64px 40px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+          <h1 style="margin: 0; font-size: 27px; font-weight: 600; letter-spacing: -0.02em;">Settings</h1>
+          <p style="margin: 0; font-size: 14.5px; color: #6B7C89;">Monitoring sources, notifications and team access for Nordbygg Entreprenør AS.</p>
+        </div>
+
+        <div style="background: #FDE7E7; border: 1px solid #F3D3D3; border-radius: 14px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 13px; font-weight: 600; color: #8C3A3A;">One data source could not be reached</span>
+            <span style="font-size: 12.5px; color: #7A4A4A;">Insurance certificate registry last responded 02 Aug 2026, 23:40. Other sources are up to date.</span>
+          </div>
+          <button onClick="{{ toastRetry }}" style="padding: 8px 14px; border-radius: 9px; border: 1px solid #E9C6C6; background: #FFFFFF; color: #8C3A3A; font-size: 12.5px; font-weight: 500; cursor: pointer;">Retry connection</button>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; overflow: hidden; margin-bottom: 20px;">
+          <div style="padding: 16px 20px; border-bottom: 1px solid #DCE7EE;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Monitored data sources</h2>
+          </div>
+          <sc-for list="{{ sources }}" as="s" hint-placeholder-count="5">
+            <div style="padding: 15px 20px; border-bottom: 1px solid #DCE7EE; display: flex; align-items: center; gap: 16px;">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                <span style="font-size: 13.5px; font-weight: 500;">{{ s.name }}</span>
+                <span style="font-size: 12px; color: #6B7C89;">{{ s.desc }}</span>
+              </div>
+              <span style="font-size: 12px; color: #6B7C89;">{{ s.freq }}</span>
+              <button onClick="{{ s.toggle }}" style="width: 42px; height: 24px; border-radius: 20px; border: 1px solid #DCE7EE; cursor: pointer; padding: 2px; display: flex; justify-content: {{ s.justify }}; background: {{ s.track }};">
+                <span style="width: 18px; height: 18px; border-radius: 50%; background: #FFFFFF; display: block;"></span>
+              </button>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 14px; overflow: hidden;">
+          <div style="padding: 16px 20px; border-bottom: 1px solid #DCE7EE;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Team</h2>
+          </div>
+          <sc-for list="{{ team }}" as="m" hint-placeholder-count="4">
+            <div style="padding: 14px 20px; border-bottom: 1px solid #DCE7EE; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: #DCEFFA; color: #1F4F6F; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center;">{{ m.initials }}</div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 13.5px; font-weight: 500;">{{ m.name }}</span>
+                <span style="font-size: 12px; color: #6B7C89;">{{ m.email }}</span>
+              </div>
+              <span style="font-size: 12.5px; color: #6B7C89;">{{ m.role }}</span>
+              <span style="font-size: 12px; color: #6B7C89;">{{ m.assigned }} assigned</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+  </main>
+
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(36, 55, 70, 0.28); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 40;">
+      <div style="width: 520px; max-width: 100%; background: #FFFFFF; border: 1px solid #DCE7EE; border-radius: 16px; padding: 24px; animation: dcrise 160ms ease-out;">
+        <h2 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 600;">{{ modalTitle }}</h2>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6B7C89;">{{ modalSubtitle }}</p>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-size: 12px; font-weight: 500; color: #6B7C89;">Title</label>
+            <input value="{{ modalTaskTitle }}" onChange="{{ onModalTitle }}" placeholder="Request updated insurance certificate" style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; font-size: 13px; color: #243746; outline: none;" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 12px; font-weight: 500; color: #6B7C89;">Assigned employee</label>
+              <select style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; font-size: 13px; color: #243746;">
+                <option>Marte Solberg</option>
+                <option>Jonas Vik</option>
+                <option>Ida Bremnes</option>
+                <option>Henrik Aune</option>
+              </select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 12px; font-weight: 500; color: #6B7C89;">Due date</label>
+              <input type="date" value="2026-08-17" style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; font-size: 13px; color: #243746;" />
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 12px; font-weight: 500; color: #6B7C89;">Related event</label>
+              <select style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; font-size: 13px; color: #243746;">
+                <option>Managing director changed</option>
+                <option>New registered charge identified</option>
+                <option>Annual accounts submitted</option>
+              </select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 12px; font-weight: 500; color: #6B7C89;">Priority</label>
+              <select style="padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; font-size: 13px; color: #243746;">
+                <option>Normal</option>
+                <option>Low</option>
+                <option>High</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-size: 12px; font-weight: 500; color: #6B7C89;">Comment</label>
+            <textarea placeholder="Optional context for the assigned employee" style="min-height: 72px; resize: vertical; padding: 10px 12px; border-radius: 9px; border: 1px solid #DCE7EE; font-family: inherit; font-size: 13px; color: #243746; outline: none;"></textarea>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px;">
+          <button onClick="{{ closeModal }}" style="padding: 10px 16px; border-radius: 9px; border: 1px solid #DCE7EE; background: #FFFFFF; color: #6B7C89; font-size: 13px; font-weight: 500; cursor: pointer;">Cancel</button>
+          <button onClick="{{ submitModal }}" style="padding: 10px 16px; border-radius: 9px; border: none; background: #4A9FD1; color: #FFFFFF; font-size: 13px; font-weight: 600; cursor: pointer;">{{ modalCta }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toastText }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; right: 24px; bottom: 24px; background: #1F4F6F; color: #FFFFFF; padding: 13px 18px; border-radius: 11px; font-size: 13px; z-index: 50; animation: dcrise 160ms ease-out;">{{ toastText }}</div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showAiSummaries&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Monitoring&quot;},&quot;showTimelineExplanations&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Monitoring&quot;},&quot;attentionStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;colour&quot;,&quot;neutral&quot;],&quot;default&quot;:&quot;colour&quot;,&quot;tsType&quot;:&quot;\&quot;colour\&quot; | \&quot;neutral\&quot;&quot;,&quot;section&quot;:&quot;Monitoring&quot;}}">
+const ICONS = {
+  dashboard: "M4 4h7v7H4z M13 4h7v5h-7z M13 11h7v9h-7z M4 13h7v7H4z",
+  companies: "M4 20V6l7-2v16 M11 20h9V10h-9 M14 13h3 M14 16h3 M7 9h1 M7 12h1 M7 15h1",
+  changes: "M3 13h4l2-6 3 12 2.5-8 2 4H21",
+  tasks: "M4 5h16v14H4z M8 12l2.5 2.5L16 9",
+  reports: "M6 3h9l4 4v14H6z M15 3v4h4 M9 12h6 M9 16h6",
+  settings: "M4 8h10 M18 8h2 M4 16h4 M12 16h8 M16 8a2 2 0 1 0 0 0.01 M10 16a2 2 0 1 0 0 0.01",
+  count: "M4 6h16 M4 12h16 M4 18h10",
+  bell: "M6 16V11a6 6 0 1 1 12 0v5l1.5 2H4.5z M10 20h4",
+  eye: "M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z",
+  check: "M4 5h16v14H4z M8 12l2.5 2.5L16 9",
+  doc: "M6 3h9l4 4v14H6z M9 12h6 M9 16h6",
+  chart: "M4 20V9 M10 20V4 M16 20v-7 M22 20H2",
+  clock: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v5l3 2"
+};
+
+const LV = {
+  "New information": ["#DCEFFA", "#1F4F6F"],
+  "Change detected": ["#DCEFFA", "#1F4F6F"],
+  "Review recommended": ["#FFF4D6", "#7A5A12"],
+  "Time-sensitive": ["#FDE7E7", "#8C3A3A"]
+};
+const ST = {
+  "Reviewed": ["#F1F5F8", "#5A6B78"],
+  "Unresolved": ["#FFF4D6", "#7A5A12"],
+  "Task created": ["#DCEFFA", "#1F4F6F"],
+  "Not started": ["#F1F5F8", "#5A6B78"],
+  "In progress": ["#DCEFFA", "#1F4F6F"],
+  "Waiting for information": ["#FFF4D6", "#7A5A12"],
+  "Completed": ["#F1F5F8", "#5A6B78"],
+  "No action needed": ["#F1F5F8", "#5A6B78"]
+};
+
+const COMPANIES = [
+  { id: 1, company: "Nordvik Bygg AS", orgNr: "912 345 678", category: "Groundworks", owner: "Marte Solberg", latest: "Managing director changed", events: 3, status: "Unresolved", checked: "03 Aug 2026", attn: "Review recommended" },
+  { id: 2, company: "Fjellstrand Elektro AS", orgNr: "923 456 781", category: "Electrical", owner: "Jonas Vik", latest: "Credit rating updated", events: 2, status: "Unresolved", checked: "03 Aug 2026", attn: "Change detected" },
+  { id: 3, company: "Hansteen Ventilasjon AS", orgNr: "934 567 812", category: "HVAC", owner: "Ida Bremnes", latest: "Insurance document expires soon", events: 1, status: "Task created", checked: "02 Aug 2026", attn: "Time-sensitive" },
+  { id: 4, company: "Sørlandet Rørservice AS", orgNr: "945 678 123", category: "Plumbing", owner: "Henrik Aune", latest: "Annual accounts submitted", events: 1, status: "Reviewed", checked: "02 Aug 2026", attn: "New information" },
+  { id: 5, company: "Bergheim Transport AS", orgNr: "956 781 234", category: "Logistics", owner: "Camilla Fossum", latest: "Company address changed", events: 1, status: "Reviewed", checked: "01 Aug 2026", attn: "New information" },
+  { id: 6, company: "Kvernland Stillas AS", orgNr: "967 812 345", category: "Scaffolding", owner: "Marte Solberg", latest: "Board member changed", events: 2, status: "Unresolved", checked: "01 Aug 2026", attn: "Change detected" },
+  { id: 7, company: "Lysaker Maskin AS", orgNr: "978 123 456", category: "Heavy equipment", owner: "Jonas Vik", latest: "New registered charge identified", events: 1, status: "Task created", checked: "31 Jul 2026", attn: "Review recommended" },
+  { id: 8, company: "Storøy Malerservice AS", orgNr: "989 234 567", category: "Painting", owner: "Ida Bremnes", latest: "No changes detected", events: 0, status: "No action needed", checked: "31 Jul 2026", attn: "New information" },
+  { id: 9, company: "Trondheim Grunnteknikk AS", orgNr: "990 345 678", category: "Geotechnical", owner: "Henrik Aune", latest: "Auditor changed", events: 1, status: "Reviewed", checked: "30 Jul 2026", attn: "New information" },
+  { id: 10, company: "Vestby Sikkerhet AS", orgNr: "911 456 789", category: "Site security", owner: "Camilla Fossum", latest: "No changes detected", events: 0, status: "No action needed", checked: "30 Jul 2026", attn: "New information" }
+];
+
+const EVENTS = [
+  { id: 1, cid: 1, company: "Nordvik Bygg AS", orgNr: "912 345 678", type: "Managing director changed", date: "14 May 2026, 08:42", attn: "Review recommended", status: "Unresolved", owner: "Marte Solberg", source: "Official company register", followUp: "Unresolved", description: "The registered managing director changed from Anna Larsen to Erik Hansen. The registration was confirmed in the official company register." },
+  { id: 2, cid: 2, company: "Fjellstrand Elektro AS", orgNr: "923 456 781", type: "Credit rating updated", date: "12 May 2026, 06:10", attn: "Change detected", status: "Unresolved", owner: "Jonas Vik", source: "Credit information provider", followUp: "Unresolved", description: "The external credit assessment was updated following submission of new accounting figures. Payment history over the last 12 months is unchanged." },
+  { id: 3, cid: 3, company: "Hansteen Ventilasjon AS", orgNr: "934 567 812", type: "Insurance document expires soon", date: "10 May 2026, 09:05", attn: "Time-sensitive", status: "Task created", owner: "Ida Bremnes", source: "Internal document archive", followUp: "Task created", description: "Liability insurance certificate expires in 14 days. An updated certificate has not yet been received." },
+  { id: 4, cid: 6, company: "Kvernland Stillas AS", orgNr: "967 812 345", type: "Board member changed", date: "08 May 2026, 11:20", attn: "Change detected", status: "Unresolved", owner: "Marte Solberg", source: "Official company register", followUp: "Unresolved", description: "One board member resigned and a new member was registered. The board still meets the minimum composition requirement." },
+  { id: 5, cid: 7, company: "Lysaker Maskin AS", orgNr: "978 123 456", type: "New registered charge identified", date: "06 May 2026, 07:55", attn: "Review recommended", status: "Task created", owner: "Jonas Vik", source: "Register of mortgaged movable property", followUp: "Task created", description: "A new charge was registered on operating equipment. The amount and secured party are stated in the register entry." },
+  { id: 6, cid: 4, company: "Sørlandet Rørservice AS", orgNr: "945 678 123", type: "Annual accounts submitted", date: "04 May 2026, 05:30", attn: "New information", status: "Reviewed", owner: "Henrik Aune", source: "Annual accounts register", followUp: "Reviewed", description: "Annual accounts for 2025 were submitted within the deadline. Operating revenue and equity are reported as increased from the previous year." },
+  { id: 7, cid: 5, company: "Bergheim Transport AS", orgNr: "956 781 234", type: "Company address changed", date: "02 May 2026, 10:15", attn: "New information", status: "Reviewed", owner: "Camilla Fossum", source: "Official company register", followUp: "Reviewed", description: "The registered business address was updated within the same municipality. Contact details in the platform were updated accordingly." },
+  { id: 8, cid: 9, company: "Trondheim Grunnteknikk AS", orgNr: "990 345 678", type: "Auditor changed", date: "29 Apr 2026, 08:00", attn: "New information", status: "Reviewed", owner: "Henrik Aune", source: "Official company register", followUp: "Reviewed", description: "A new auditor was registered. The previous auditor engagement ended by mutual agreement according to the register entry." }
+];
+
+const TASKS = [
+  { id: 1, title: "Request updated insurance certificate", company: "Hansteen Ventilasjon AS", event: "Insurance document expires soon", owner: "Ida Bremnes", due: "12 Aug 2026", priority: "High", status: "In progress", comments: "2 comments", cid: 3 },
+  { id: 2, title: "Review new management registration", company: "Nordvik Bygg AS", event: "Managing director changed", owner: "Marte Solberg", due: "14 Aug 2026", priority: "Normal", status: "Not started", comments: "1 comment", cid: 1 },
+  { id: 3, title: "Clarify registered charge with supplier", company: "Lysaker Maskin AS", event: "New registered charge identified", owner: "Jonas Vik", due: "18 Aug 2026", priority: "Normal", status: "Waiting for information", comments: "3 comments", cid: 7 },
+  { id: 4, title: "Document review of 2025 accounts", company: "Sørlandet Rørservice AS", event: "Annual accounts submitted", owner: "Henrik Aune", due: "21 Aug 2026", priority: "Low", status: "In progress", comments: "No comments", cid: 4 },
+  { id: 5, title: "Confirm board composition in contract file", company: "Kvernland Stillas AS", event: "Board member changed", owner: "Marte Solberg", due: "25 Aug 2026", priority: "Low", status: "Not started", comments: "No comments", cid: 6 },
+  { id: 6, title: "Archive updated address details", company: "Bergheim Transport AS", event: "Company address changed", owner: "Camilla Fossum", due: "28 Jul 2026", priority: "Low", status: "Completed", comments: "1 comment", cid: 5 }
+];
+
+const TIMELINE = [
+  { title: "Managing director changed", detected: "14 May 2026, 08:42", source: "Official company register", prev: "Anna Larsen", current: "Erik Hansen", attn: "Review recommended", followUp: "Unresolved", ai: "A change in management may be a routine organisational event. It can still be relevant to review when combined with other financial or operational changes." },
+  { title: "Annual accounts submitted", detected: "06 May 2026, 05:30", source: "Annual accounts register", prev: "2024 accounts, submitted 28 Jun 2025", current: "2025 accounts, submitted 30 Apr 2026", attn: "New information", followUp: "Reviewed", ai: "Accounts were submitted within the statutory deadline. Reported figures are available in the financial information tab for comparison across years." },
+  { title: "New registered charge identified", detected: "28 Apr 2026, 07:12", source: "Register of mortgaged movable property", prev: "No registered charges", current: "One charge on operating equipment", attn: "Review recommended", followUp: "Task created", ai: "A registered charge indicates secured financing. This is common in the industry and does not on its own indicate payment difficulties." },
+  { title: "Credit rating updated", detected: "19 Mar 2026, 06:05", source: "Credit information provider", prev: "Previous assessment from Sep 2025", current: "Updated assessment from Mar 2026", attn: "Change detected", followUp: "Reviewed", ai: "The external assessment was refreshed after new figures became available. The underlying payment history is unchanged for the period." },
+  { title: "Registered business address changed", detected: "11 Feb 2026, 09:48", source: "Official company register", prev: "Storgata 14, 0184 Oslo", current: "Nydalsveien 28, 0484 Oslo", attn: "New information", followUp: "Reviewed", ai: "An address change within the same municipality is normally administrative. Contract and invoicing details may need updating internally." }
+];
+
+class Component extends DCLogic {
+  state = {
+    page: "dashboard", tab: "overview", selId: 1,
+    search: "", fCategory: "All categories", fOwner: "All internal owners",
+    fEvent: "All event types", fStatus: "All follow-up statuses", fRange: "Last 90 days",
+    changeFilter: "All events", taskFilter: "All tasks",
+    modal: null, toast: "", refreshing: false, noteDraft: "",
+    reviewed: {}, modalTaskTitle: "",
+    sourcesOn: { 1: true, 2: true, 3: true, 4: true, 5: false }
+  };
+
+  componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._r); }
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: "" }), 2600);
+  }
+  go(page) { this.setState({ page: page, modal: null }); window.scrollTo(0, 0); }
+  openCompany(id) { this.setState({ page: "profile", tab: "overview", selId: id, modal: null }); window.scrollTo(0, 0); }
+
+  chip(map, key) {
+    const neutral = (this.props.attentionStyle ?? "colour") === "neutral";
+    const pair = map[key] || ["#F1F5F8", "#5A6B78"];
+    return neutral ? ["#F1F5F8", "#5A6B78"] : pair;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const showAi = this.props.showAiSummaries ?? true;
+    const lv = (k) => this.chip(LV, k);
+    const st = (k) => this.chip(ST, k);
+    const nav = [
+      ["dashboard", "Dashboard", ICONS.dashboard, null],
+      ["list", "Subcontractors", ICONS.companies, "47"],
+      ["changes", "Changes and alerts", ICONS.changes, "8"],
+      ["tasks", "Follow-up tasks", ICONS.tasks, "5"],
+      ["reports", "Reports", ICONS.reports, null],
+      ["settings", "Settings", ICONS.settings, null]
+    ];
+    const activePage = s.page === "profile" ? "list" : s.page;
+
+    const decorate = (c) => {
+      const l = lv(c.attn), t = st(c.status);
+      return Object.assign({}, c, {
+        attnBg: l[0], attnFg: l[1], statusBg: t[0], statusFg: t[1],
+        eventsBg: c.events > 0 ? "#DCEFFA" : "#F1F5F8",
+        eventsFg: c.events > 0 ? "#1F4F6F" : "#96A5B0",
+        open: () => this.openCompany(c.id)
+      });
+    };
+
+    let list = COMPANIES.slice();
+    const q = s.search.trim().toLowerCase();
+    if (q) list = list.filter(c => (c.company + " " + c.orgNr).toLowerCase().includes(q));
+    if (s.fCategory !== "All categories") list = list.filter(c => c.category === s.fCategory);
+    if (s.fOwner !== "All internal owners") list = list.filter(c => c.owner === s.fOwner);
+    if (s.fStatus !== "All follow-up statuses") list = list.filter(c => c.status === s.fStatus);
+    if (s.fEvent !== "All event types") list = list.filter(c => c.latest === s.fEvent);
+
+    const eventDeco = (e) => {
+      const status = s.reviewed[e.id] ? "Reviewed" : e.status;
+      const l = lv(e.attn), t = st(status);
+      return Object.assign({}, e, {
+        status: status, attnBg: l[0], attnFg: l[1], statusBg: t[0], statusFg: t[1],
+        open: () => this.openCompany(e.cid),
+        review: () => { this.setState(p => ({ reviewed: Object.assign({}, p.reviewed, { [e.id]: true }) })); this.flash("Marked as reviewed. Logged in the change history."); }
+      });
+    };
+    const evStatus = (e) => s.reviewed[e.id] ? "Reviewed" : e.status;
+    const cfDefs = [
+      ["All events", () => true],
+      ["New information", e => e.attn === "New information"],
+      ["Change detected", e => e.attn === "Change detected"],
+      ["Review recommended", e => e.attn === "Review recommended"],
+      ["Time-sensitive", e => e.attn === "Time-sensitive"],
+      ["Reviewed", e => evStatus(e) === "Reviewed"],
+      ["Unresolved", e => evStatus(e) === "Unresolved"]
+    ];
+    const activeCf = cfDefs.find(d => d[0] === s.changeFilter) || cfDefs[0];
+
+    const tfDefs = ["All tasks", "Not started", "In progress", "Waiting for information", "Completed"];
+    const tasksFiltered = TASKS.filter(t => s.taskFilter === "All tasks" || t.status === s.taskFilter);
+
+    const sel = COMPANIES.find(c => c.id === s.selId) || COMPANIES[0];
+    const selTasks = TASKS.filter(t => t.cid === sel.id).concat(TASKS.slice(0, 2)).slice(0, 3);
+
+    const bars = [["2022", 38.4, 0.44], ["2023", 46.1, 0.53], ["2024", 52.7, 0.61], ["2025", 61.2, 0.72]];
+
+    return {
+      showAi,
+      isDashboard: s.page === "dashboard", isList: s.page === "list", isProfile: s.page === "profile",
+      isChanges: s.page === "changes", isTasks: s.page === "tasks", isReports: s.page === "reports", isSettings: s.page === "settings",
+      navItems: nav.map(n => ({
+        label: n[1], icon: n[2], badge: n[3],
+        bg: activePage === n[0] ? "#EAF5FC" : "transparent",
+        fg: activePage === n[0] ? "#1F4F6F" : "#6B7C89",
+        weight: activePage === n[0] ? "600" : "500",
+        go: () => this.go(n[0])
+      })),
+      refreshLabel: s.refreshing ? "Checking sources…" : "Refresh data",
+      refresh: () => {
+        if (s.refreshing) return;
+        this.setState({ refreshing: true });
+        clearTimeout(this._r);
+        this._r = setTimeout(() => { this.setState({ refreshing: false }); this.flash("All sources checked. No new changes since 06:15."); }, 1400);
+      },
+      summaryCards: [
+        { label: "Monitored subcontractors", value: "47", note: "Across 6 service categories", icon: ICONS.companies },
+        { label: "New changes", value: "8", note: "Detected in the last 30 days", icon: ICONS.changes },
+        { label: "Review recommended", value: "3", note: "Awaiting employee assessment", icon: ICONS.eye },
+        { label: "Open follow-up tasks", value: "5", note: "2 due within 14 days", icon: ICONS.tasks }
+      ],
+      recentChanges: EVENTS.slice(0, 7).map(e => {
+        const d = eventDeco(e);
+        return { company: e.company, type: e.type, date: e.date.split(",")[0], attn: e.attn, attnBg: d.attnBg, attnFg: d.attnFg, followUp: d.status, owner: e.owner, open: d.open };
+      }),
+      reviewCards: [1, 2, 3].map(id => decorate(COMPANIES.find(c => c.id === id))),
+      goChanges: () => this.go("changes"),
+      goList: () => this.go("list"),
+
+      listCountLabel: list.length + " of " + COMPANIES.length + " shown · 47 monitored in total",
+      filteredCompanies: list.map(decorate),
+      listEmpty: list.length === 0,
+      search: s.search,
+      onSearch: e => this.setState({ search: e.target.value }),
+      categoryOptions: ["All categories"].concat(COMPANIES.map(c => c.category).filter((v, i, a) => a.indexOf(v) === i)),
+      ownerOptions: ["All internal owners"].concat(COMPANIES.map(c => c.owner).filter((v, i, a) => a.indexOf(v) === i)),
+      eventOptions: ["All event types"].concat(COMPANIES.map(c => c.latest).filter((v, i, a) => a.indexOf(v) === i)),
+      statusOptions: ["All follow-up statuses", "Unresolved", "Task created", "Reviewed", "No action needed"],
+      rangeOptions: ["Last 90 days", "Last 30 days", "Last 7 days", "Last 12 months"],
+      fCategory: s.fCategory, fOwner: s.fOwner, fEvent: s.fEvent, fStatus: s.fStatus, fRange: s.fRange,
+      onCategory: e => this.setState({ fCategory: e.target.value }),
+      onOwner: e => this.setState({ fOwner: e.target.value }),
+      onEvent: e => this.setState({ fEvent: e.target.value }),
+      onStatus: e => this.setState({ fStatus: e.target.value }),
+      onRange: e => this.setState({ fRange: e.target.value }),
+      resetFilters: () => this.setState({ search: "", fCategory: "All categories", fOwner: "All internal owners", fEvent: "All event types", fStatus: "All follow-up statuses", fRange: "Last 90 days" }),
+
+      sel: {
+        company: sel.company, orgNr: sel.orgNr, owner: sel.owner,
+        companyStatus: "Registered and active",
+        contact: "post@nordvikbygg.no · +47 22 84 10 00",
+        updated: "03 Aug 2026, 06:15",
+        aiSummary: "Three changes have been identified during the last 60 days. The company appointed a new managing director, submitted updated annual accounts and registered a new charge. These changes do not establish that the subcontractor is unable to perform its obligations, but the combined information may justify further review."
+      },
+      tabs: [
+        ["overview", "Overview"], ["timeline", "Change timeline"], ["company", "Company information"],
+        ["finance", "Financial information"], ["docs", "Documents"], ["notes", "Internal notes"], ["follow", "Follow-up"]
+      ].map(t => ({
+        label: t[1],
+        border: s.tab === t[0] ? "#4A9FD1" : "transparent",
+        fg: s.tab === t[0] ? "#1F4F6F" : "#6B7C89",
+        weight: s.tab === t[0] ? "600" : "500",
+        go: () => this.setState({ tab: t[0] })
+      })),
+      tabOverview: s.tab === "overview", tabTimeline: s.tab === "timeline", tabCompany: s.tab === "company",
+      tabFinance: s.tab === "finance", tabDocs: s.tab === "docs", tabNotes: s.tab === "notes", tabFollow: s.tab === "follow",
+      goTimeline: () => this.setState({ tab: "timeline" }),
+
+      latestChanges: TIMELINE.slice(0, 4).map(t => {
+        const l = lv(t.attn);
+        return { title: t.title, meta: "Detected " + t.detected.split(",")[0] + " · " + t.source, attn: t.attn, attnBg: l[0], attnFg: l[1] };
+      }),
+      selTasks: selTasks.map(t => {
+        const c = st(t.status);
+        return { title: t.title, meta: t.company + " · " + t.event, due: t.due, status: t.status, statusBg: c[0], statusFg: c[1] };
+      }),
+      expirations: [
+        { name: "Liability insurance certificate", until: "17 Aug 2026", note: "Expires in 14 days", bg: this.chip(LV, "Time-sensitive")[0], fg: this.chip(LV, "Time-sensitive")[1] },
+        { name: "Tax compliance certificate", until: "30 Sep 2026", note: "Expires in 58 days", bg: this.chip(LV, "Review recommended")[0], fg: this.chip(LV, "Review recommended")[1] },
+        { name: "HSE declaration", until: "12 Jan 2027", note: "Valid", bg: "#F1F5F8", fg: "#5A6B78" }
+      ],
+      keyInfo: [
+        { label: "Legal form", value: "Aksjeselskap (AS)" },
+        { label: "Registered", value: "14 Mar 2009" },
+        { label: "Industry code", value: "43.120 Site preparation" },
+        { label: "Employees", value: "38" },
+        { label: "Municipality", value: "Oslo" },
+        { label: "VAT registered", value: "Yes" }
+      ],
+      timeline: TIMELINE.map((t, i) => {
+        const l = lv(t.attn);
+        return Object.assign({}, t, {
+          attnBg: l[0], attnFg: l[1],
+          ai: (this.props.showTimelineExplanations ?? true) ? t.ai : "",
+          review: () => this.flash("Change marked as reviewed by Marte Solberg.")
+        });
+      }),
+      timelineCount: TIMELINE.length + " changes since Feb 2026",
+      companyInfo: [
+        { label: "Registered name", value: sel.company },
+        { label: "Organisation number", value: sel.orgNr },
+        { label: "Legal form", value: "Aksjeselskap (AS)" },
+        { label: "Registered address", value: "Nydalsveien 28, 0484 Oslo" },
+        { label: "Postal address", value: "Postboks 118, 0409 Oslo" },
+        { label: "Industry code", value: "43.120 Site preparation" },
+        { label: "Registered in VAT register", value: "Yes, since 2009" },
+        { label: "Auditor", value: "Vika Revisjon AS" },
+        { label: "Share capital", value: "NOK 2 500 000" },
+        { label: "Employees reported", value: "38" }
+      ],
+      people: [
+        { initials: "EH", name: "Erik Hansen", role: "Managing director", since: "Since May 2026" },
+        { initials: "AL", name: "Anna Larsen", role: "Chair of the board", since: "Since 2018" },
+        { initials: "TB", name: "Tore Bakken", role: "Board member", since: "Since 2021" },
+        { initials: "SM", name: "Sigrid Moen", role: "Board member", since: "Since 2024" }
+      ],
+      owners: [
+        { name: "Nordvik Holding AS", share: "68 %" },
+        { name: "Anna Larsen", share: "22 %" },
+        { name: "Other shareholders", share: "10 %" }
+      ],
+      financials: [
+        { label: "Operating revenue (MNOK)", y23: "46.1", y24: "52.7", y25: "61.2", change: "+16.1 % from 2024" },
+        { label: "Operating result (MNOK)", y23: "2.8", y24: "3.4", y25: "3.1", change: "−8.8 % from 2024" },
+        { label: "Result before tax (MNOK)", y23: "2.4", y24: "3.0", y25: "2.6", change: "−13.3 % from 2024" },
+        { label: "Equity ratio", y23: "28 %", y24: "31 %", y25: "29 %", change: "−2 percentage points" },
+        { label: "Liquidity ratio", y23: "1.4", y24: "1.5", y25: "1.3", change: "−0.2 from 2024" },
+        { label: "Employees", y23: "31", y24: "35", y25: "38", change: "+3 from 2024" }
+      ],
+      revenueBars: bars.map((b, i) => ({ year: b[0], value: b[1].toFixed(1), height: Math.round(b[2] * 100) + "%", color: i === bars.length - 1 ? "#4A9FD1" : "#DCEFFA" })),
+      creditInfo: [
+        { label: "Assessment updated", value: "19 Mar 2026", note: "Source: credit information provider" },
+        { label: "Payment remarks", value: "None registered", note: "Checked 03 Aug 2026" },
+        { label: "Registered charges", value: "1", note: "Operating equipment, registered Apr 2026" },
+        { label: "Accounts submitted", value: "Within deadline", note: "2025 accounts submitted 30 Apr 2026" }
+      ],
+      documents: [
+        { name: "Liability insurance certificate", type: "Insurance", uploaded: "17 Aug 2025", until: "17 Aug 2026", note: "Expires in 14 days", bg: this.chip(LV, "Time-sensitive")[0], fg: this.chip(LV, "Time-sensitive")[1] },
+        { name: "Tax compliance certificate", type: "Public certificate", uploaded: "30 Mar 2026", until: "30 Sep 2026", note: "Valid", bg: "#F1F5F8", fg: "#5A6B78" },
+        { name: "HSE declaration 2026", type: "Declaration", uploaded: "12 Jan 2026", until: "12 Jan 2027", note: "Valid", bg: "#F1F5F8", fg: "#5A6B78" },
+        { name: "Framework agreement, signed", type: "Contract", uploaded: "04 Feb 2024", until: "31 Dec 2027", note: "Valid", bg: "#F1F5F8", fg: "#5A6B78" },
+        { name: "Annual accounts 2025", type: "Financial", uploaded: "02 May 2026", until: "—", note: "Reference document", bg: "#DCEFFA", fg: "#1F4F6F" }
+      ],
+      noteDraft: s.noteDraft,
+      onNoteDraft: e => this.setState({ noteDraft: e.target.value }),
+      saveNote: () => { this.setState({ noteDraft: "" }); this.flash("Note saved to the internal record."); },
+      notes: [
+        { initials: "MS", author: "Marte Solberg", date: "15 May 2026", text: "Spoke with the new managing director. Ongoing assignments continue with the same site management, and the project plan for Grefsen is unchanged." },
+        { initials: "HA", author: "Henrik Aune", date: "07 May 2026", text: "Reviewed the 2025 accounts together with finance. Revenue growth is in line with the reported order book. Operating result is slightly lower, noted for the next quarterly follow-up." },
+        { initials: "JV", author: "Jonas Vik", date: "29 Apr 2026", text: "Registered charge relates to financing of two new excavators according to the supplier. Documentation requested for the contract file." }
+      ],
+
+      changeFilters: cfDefs.map(d => ({
+        label: d[0], count: EVENTS.filter(d[1]).length,
+        bg: s.changeFilter === d[0] ? "#EAF5FC" : "#FFFFFF",
+        fg: s.changeFilter === d[0] ? "#1F4F6F" : "#6B7C89",
+        border: s.changeFilter === d[0] ? "#BEDEF0" : "#DCE7EE",
+        weight: s.changeFilter === d[0] ? "600" : "500",
+        go: () => this.setState({ changeFilter: d[0] })
+      })),
+      filteredEvents: EVENTS.filter(activeCf[1]).map(eventDeco),
+
+      taskFilters: tfDefs.map(f => ({
+        label: f, count: TASKS.filter(t => f === "All tasks" || t.status === f).length,
+        bg: s.taskFilter === f ? "#EAF5FC" : "#FFFFFF",
+        fg: s.taskFilter === f ? "#1F4F6F" : "#6B7C89",
+        border: s.taskFilter === f ? "#BEDEF0" : "#DCE7EE",
+        weight: s.taskFilter === f ? "600" : "500",
+        go: () => this.setState({ taskFilter: f })
+      })),
+      filteredTasks: tasksFiltered.map(t => {
+        const c = st(t.status);
+        return Object.assign({}, t, { statusBg: c[0], statusFg: c[1] });
+      }),
+      tasksEmpty: tasksFiltered.length === 0,
+
+      reports: [
+        { title: "Weekly monitoring summary", desc: "All changes detected during the week, grouped by subcontractor and source.", icon: ICONS.count },
+        { title: "Monthly management report", desc: "Overview for leadership: volume of changes, follow-up status and open activities.", icon: ICONS.chart },
+        { title: "Individual subcontractor history", desc: "Complete change history, notes and documents for one selected subcontractor.", icon: ICONS.doc },
+        { title: "Open follow-up report", desc: "All unresolved tasks with owner, due date and related monitoring event.", icon: ICONS.tasks },
+        { title: "Recent organisational changes", desc: "Management, board, ownership and registration changes for the period.", icon: ICONS.companies },
+        { title: "Recent financial changes", desc: "Submitted accounts, credit information updates and registered charges.", icon: ICONS.reports }
+      ],
+      sources: [
+        { name: "Official company register", desc: "Management, board, address and registration changes", freq: "Daily", id: 1 },
+        { name: "Annual accounts register", desc: "Submitted accounts and key reported figures", freq: "Weekly", id: 2 },
+        { name: "Credit information provider", desc: "Credit assessments and payment remarks", freq: "Daily", id: 3 },
+        { name: "Register of mortgaged movable property", desc: "Registered charges on assets and equipment", freq: "Weekly", id: 4 },
+        { name: "Internal document archive", desc: "Insurance, certificates and contract expiry dates", freq: "Daily", id: 5 }
+      ].map(src => ({
+        name: src.name, desc: src.desc, freq: src.freq,
+        track: s.sourcesOn[src.id] ? "#4A9FD1" : "#E4EBF0",
+        justify: s.sourcesOn[src.id] ? "flex-end" : "flex-start",
+        toggle: () => this.setState(p => ({ sourcesOn: Object.assign({}, p.sourcesOn, { [src.id]: !p.sourcesOn[src.id] }) }))
+      })),
+      team: [
+        { initials: "MS", name: "Marte Solberg", email: "marte.solberg@nordbygg.no", role: "Procurement", assigned: 14 },
+        { initials: "JV", name: "Jonas Vik", email: "jonas.vik@nordbygg.no", role: "Project management", assigned: 11 },
+        { initials: "IB", name: "Ida Bremnes", email: "ida.bremnes@nordbygg.no", role: "Contract administration", assigned: 9 },
+        { initials: "HA", name: "Henrik Aune", email: "henrik.aune@nordbygg.no", role: "Finance", assigned: 8 },
+        { initials: "CF", name: "Camilla Fossum", email: "camilla.fossum@nordbygg.no", role: "Procurement", assigned: 5 }
+      ],
+
+      modalOpen: !!s.modal,
+      modalTitle: s.modal === "note" ? "Add internal note" : "Create follow-up task",
+      modalSubtitle: s.modal === "note" ? "Notes are stored with the subcontractor record and visible to your organisation." : "The task is linked to the selected subcontractor and monitoring event.",
+      modalCta: s.modal === "note" ? "Save note" : "Create task",
+      modalTaskTitle: s.modalTaskTitle,
+      onModalTitle: e => this.setState({ modalTaskTitle: e.target.value }),
+      openTask: () => this.setState({ modal: "task" }),
+      openNote: () => this.setState({ modal: "note" }),
+      closeModal: () => this.setState({ modal: null }),
+      submitModal: () => { const wasNote = s.modal === "note"; this.setState({ modal: null, modalTaskTitle: "" }); this.flash(wasNote ? "Note saved to the internal record." : "Follow-up task created and assigned."); },
+
+      toastText: s.toast,
+      toastUpload: () => this.flash("Document upload opened."),
+      toastExport: () => this.flash("Report queued. You will receive it as PDF."),
+      toastSource: () => this.flash("Opening source record in the official register."),
+      toastPdf: () => this.flash("Report exported as PDF."),
+      toastXls: () => this.flash("Report exported as Excel."),
+      toastRetry: () => this.flash("Retrying connection to insurance certificate registry…")
+    };
+  }
+}
+
+</script>
+</body>
+</html>
