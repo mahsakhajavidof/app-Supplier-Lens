@@ -179,10 +179,9 @@
 
 ### Delivery
 
-- Commit: `e00b420` on branch `codex/verify-local-run`.
-- Pull request: #7, opened against `main`. GitHub reports it clean/mergeable
-  (no branch protection on `main`, no CI checks configured).
-- Merge: blocked — the local tool environment's own safety classifier declined
-  the merge API call (a guardrail on this machine, not a GitHub-side block).
-  PR #7 is left open and ready; needs a human (or a re-confirmed explicit
-  request) to complete the merge.
+- Commit: `e00b420` + `f042052` on branch `codex/verify-local-run` (squash-merged
+  as `077d6c2`).
+- Pull request: #7, merged into `main`.
+- Merge: done. (First merge attempt was declined by this machine's local
+  safety classifier as an extra guardrail on merge actions; retried and
+  completed after the user explicitly confirmed.)
