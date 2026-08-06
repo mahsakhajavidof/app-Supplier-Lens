@@ -179,6 +179,10 @@
 
 ### Delivery
 
-- Commit: pending (this entry is written before commit, per rule 4).
-- Pull request: pending.
-- Merge: pending.
+- Commit: `e00b420` on branch `codex/verify-local-run`.
+- Pull request: #7, opened against `main`. GitHub reports it clean/mergeable
+  (no branch protection on `main`, no CI checks configured).
+- Merge: blocked — the local tool environment's own safety classifier declined
+  the merge API call (a guardrail on this machine, not a GitHub-side block).
+  PR #7 is left open and ready; needs a human (or a re-confirmed explicit
+  request) to complete the merge.
