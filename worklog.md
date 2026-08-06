@@ -120,3 +120,69 @@
 - Commit: `6b18305` + `8d33f30` (squash-merged as `a4968e2`).
 - Pull request: #5, merged into `main`.
 - Merge: done.
+
+## 2026-08-06 — Local run and full-stack verification
+
+### Summary
+
+- Ran the app locally per `README.md`'s documented startup commands and verified
+  the backend and frontend end-to-end. Both were already running from an earlier
+  session on their standard ports; verified them in place rather than restarting,
+  since they were healthy and reflected the current on-disk code.
+- Confirmed `backend/.env` has exactly `DATABASE_URL`, `PORT`, and
+  `COMPANIES_HOUSE_API_KEY` (names/lengths only checked — no values printed).
+- `npm install` in `backend/` and `frontend/`: no missing packages installed;
+  `backend/package-lock.json` was normalized to drop stale `@prisma/*`/`prisma`
+  lockfile entries left over from the pre-Drizzle era (not referenced by
+  `package.json` any more) — a direct side effect of the requested dependency
+  install step, not a separate design change.
+- Database migrations: already applied automatically by `runMigrations()` at
+  backend startup (`backend/src/db/index.ts`); no new migration was needed or
+  created.
+- Verified the frontend with a real headless-browser render (Playwright driving
+  a locally cached Chromium, run outside the project — not added as a project
+  dependency): dashboard rendered fully, page title correct, no `pageerror`s, no
+  failed API requests. One benign `favicon.ico` 404 in the console — cosmetic,
+  pre-existing, unrelated to app functionality.
+- Confirmed `GET /api/settings/registries` reports both providers configured
+  (`NO`, `GB`).
+- Confirmed a live, read-only Companies House lookup through the full stack
+  (frontend proxy → backend → Companies House API):
+  `GET /api/registry/lookup/GB/00445790` → HTTP 200, returned the real TESCO PLC
+  record. No subcontractor record was created, modified, or deleted.
+- Dashboard currently shows 0 subcontractors — the local `dev.db` has migrations
+  applied but no seed data loaded. This is a pre-existing data-state fact, not an
+  application defect; `npm run seed` was intentionally not run, to avoid writing
+  subcontractor records outside the scope of this verification.
+
+### Files changed
+
+- `backend/package-lock.json` (lockfile normalization only, see above).
+- `worklog.md` (this entry).
+
+### Tests and validation
+
+- Backend automated test suite (`npm test`): passed (1/1).
+- Backend TypeScript build (`npm run build`): passed.
+- Frontend type check (`npm run lint` → `tsc --noEmit`): passed, no errors.
+- Frontend production build (`npm run build`): passed.
+- Backend health check `GET /api/health`: `{"ok":true}`.
+- Frontend dev server: HTTP 200 at `http://localhost:5173/`.
+- Registry config endpoint `GET /api/settings/registries`: both `NO` and `GB`
+  report `configured: true`.
+- Live Companies House lookup via frontend proxy: HTTP 200, real company data
+  returned.
+- Headless-browser check: page rendered, no `pageerror`s, no failed (4xx/5xx)
+  API requests.
+- No functional source code was changed, so no new automated test was required
+  (per rule 5) beyond the existing suites above, which all passed.
+
+### Delivery
+
+- Commit: `e00b420` on branch `codex/verify-local-run`.
+- Pull request: #7, opened against `main`. GitHub reports it clean/mergeable
+  (no branch protection on `main`, no CI checks configured).
+- Merge: blocked — the local tool environment's own safety classifier declined
+  the merge API call (a guardrail on this machine, not a GitHub-side block).
+  PR #7 is left open and ready; needs a human (or a re-confirmed explicit
+  request) to complete the merge.
