@@ -643,3 +643,63 @@ dropdown lists only active team members.
   `00bba47`).
 - Pull request: #10, merged into `main`.
 - Merge: done.
+
+## 2026-08-07 — Follow-up: remove a hardcoded demo name missed in the sidebar
+
+### Summary
+
+- The final combined live verification (driven in a headless browser, after
+  PR #10 was already merged) caught a hardcoded `"Marte Solberg"` / `"MS"` in
+  `Sidebar.tsx`'s bottom-left "current user" widget — a static placeholder from
+  the original design mockup, entirely disconnected from the `team_members`
+  table, that the earlier grep-based sweep for demo names missed because it
+  only checked backend and non-component frontend files closely; this one
+  slipped through. Grepped the full frontend and backend source for all five
+  removed names afterward and confirmed this was the only remaining
+  occurrence.
+- Fixed by wiring the widget to the real active manager (via the existing
+  `["team"]` query, same data already used elsewhere), consistent with this
+  feature's "acting manager" placeholder model
+  (`frontend/src/lib/currentUser.ts`) — it now shows whoever is actually the
+  active `Manager`, with a plain "Unassigned" fallback if there isn't one,
+  instead of a fixed name. The unrelated fictional tenant/company name
+  ("Nordbygg Entreprenør AS") shown next to it was left untouched — that's the
+  app's client-organization branding, not a team member, and out of this
+  task's scope.
+- Also removed `"Verify Person"`, a team member I created and then deactivated
+  during this same live-verification pass to confirm the add/deactivate flow
+  end-to-end. It had zero assigned suppliers or tasks, so deleting it directly
+  was safe and left no orphaned references — done so the real team list
+  matches the acceptance criteria exactly (only Mohammad Khajavi and Linda
+  Roed), rather than leaving my own test artifact sitting there deactivated.
+
+### Files changed
+
+- `frontend/src/components/Sidebar.tsx` — current-user widget now reads the
+  active manager from the team list instead of a hardcoded name.
+- `frontend/src/components/Sidebar.test.tsx` (new).
+
+### Tests added (2)
+
+Shows the active manager's real name/initials and never the old hardcoded
+name; falls back to a plain "Unassigned" state (not a demo name) when no
+active manager exists in the data.
+
+### Validation results
+
+- Frontend tests: 24/24 passed (22 previous + 2 new).
+- Frontend type check and production build: passed.
+- Backend unaffected (no backend files touched) — not re-run for this change.
+- Live re-verification: headless-browser check of the Settings page's full
+  text confirmed zero occurrences of any of the five removed demo names
+  anywhere in the rendered app after this fix (there was exactly one, in the
+  sidebar, before it).
+- `GET /api/settings/team` against the real `dev.db` after removing the
+  `Verify Person` test artifact: exactly `Mohammad Khajavi` (Manager, active)
+  and `Linda Roed` (Team member, active) — nothing else.
+
+### Delivery
+
+- Commit: pending (written before commit, per rule 4).
+- Pull request: pending.
+- Merge: pending.

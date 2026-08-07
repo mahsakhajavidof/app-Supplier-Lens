@@ -1,4 +1,6 @@
 import { NavLink } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../lib/api";
 import { Icon, type ICONS } from "./Icon";
 
 const NAV: { to: string; label: string; icon: keyof typeof ICONS; badge?: string }[] = [
@@ -11,6 +13,11 @@ const NAV: { to: string; label: string; icon: keyof typeof ICONS; badge?: string
 ];
 
 export function Sidebar() {
+  // No sign-in system exists yet — this shows the active manager as a stand-in
+  // for "the current user" (see frontend/src/lib/currentUser.ts).
+  const { data: team } = useQuery({ queryKey: ["team"], queryFn: api.settings.team });
+  const currentUser = team?.find((m) => m.active && m.role === "Manager");
+
   return (
     <aside className="sticky top-0 flex h-screen w-[248px] flex-none flex-col border-r border-border bg-white">
       <div className="flex items-center gap-2.5 px-5 py-[18px] pt-6">
@@ -48,10 +55,10 @@ export function Sidebar() {
       <div className="mt-auto border-t border-border p-3.5">
         <div className="flex items-center gap-2.5 rounded-[10px] bg-surface-subtle p-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-chip text-xs font-semibold text-link">
-            MS
+            {currentUser?.initials ?? "—"}
           </div>
           <div className="flex min-w-0 flex-col gap-px">
-            <span className="text-[12.5px] font-semibold text-ink">Marte Solberg</span>
+            <span className="text-[12.5px] font-semibold text-ink">{currentUser?.name ?? "Unassigned"}</span>
             <span className="overflow-hidden truncate text-[11px] text-muted">Nordbygg Entreprenør AS</span>
           </div>
         </div>
