@@ -358,6 +358,7 @@ network/backend is involved):
 
 ### Delivery
 
-- Commit: pending (written before commit, per rule 4).
-- Pull request: pending.
-- Merge: pending.
+- Commit: `3a90896` on branch `codex/fix-no-gb-lookup-flows` (squash-merged as
+  `e7c2d35`).
+- Pull request: #8, merged into `main`.
+- Merge: done.
