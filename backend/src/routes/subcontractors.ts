@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { and, desc, eq, like, or } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "../db/index.js";
 import { events, registrySnapshots, subcontractors, teamMembers } from "../db/schema.js";
 import { serializeEvent } from "../lib/labels.js";
@@ -9,6 +8,8 @@ import { getProvider, diffSnapshots } from "../services/registryProviders/index.
 import { RegistryProviderError } from "../services/registryProviders/types.js";
 import type { NormalizedCompanyRecord } from "../services/registryProviders/types.js";
 import { persistRegistryRecord, profileValues } from "../services/registryPersistence.js";
+import { requireManager } from "../lib/permissions.js";
+import { createSubcontractorSchema, reassignOwnerSchema } from "./subcontractorSchemas.js";
 
 export const subcontractorsRouter = Router();
 
@@ -42,33 +43,6 @@ subcontractorsRouter.get("/", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
-
-// A subset of NormalizedCompanyRecord the frontend may attach when it already
-// ran a registry lookup for this org/country before submitting the form —
-// see GET /api/registry/lookup/:country/:orgNr. Storing it as the first
-// registrySnapshot means the next sync diffs against real data instead of
-// reporting every field as "changed" on first run.
-const registryDataSchema = z.object({
-  name: z.string(),
-  legalForm: z.string().optional(),
-  companyStatus: z.string().optional(),
-  registeredOn: z.string().optional(),
-  industryCode: z.string().optional(),
-  employees: z.number().optional(),
-  municipality: z.string().optional(),
-  vatRegistered: z.boolean().optional(),
-  address: z.string().optional(),
-  postalAddress: z.string().optional(),
-});
-
-const createSubcontractorSchema = z.object({
-  company: z.string().min(1),
-  orgNr: z.string().min(1),
-  country: z.string().length(2),
-  category: z.string().min(1),
-  ownerId: z.string().optional(),
-  registryData: registryDataSchema.optional(),
 });
 
 // POST /api/subcontractors
@@ -137,6 +111,35 @@ subcontractorsRouter.get("/meta/filters", async (_req, res, next) => {
       categories: uniq(rows.map((s) => s.category)),
       owners: uniq(rows.map((s) => s.owner?.name)),
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/subcontractors/:id — assign/reassign this supplier's internal
+// owner. Manager-only, per the team-management permission model.
+subcontractorsRouter.patch("/:id", requireManager, async (req, res, next) => {
+  try {
+    const body = reassignOwnerSchema.parse(req.body);
+    const target = await db.query.teamMembers.findFirst({ where: eq(teamMembers.id, body.ownerId) });
+    if (!target || !target.active) {
+      res.status(400).json({ error: "ownerId must be an existing, active team member." });
+      return;
+    }
+    const [updated] = await db
+      .update(subcontractors)
+      .set({ ownerId: body.ownerId })
+      .where(eq(subcontractors.id, req.params.id))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "Subcontractor not found" });
+      return;
+    }
+    const sub = await db.query.subcontractors.findFirst({
+      where: eq(subcontractors.id, updated.id),
+      with: { owner: true, events: { orderBy: [desc(events.detectedAt)] }, financials: true, people: true, owners: true },
+    });
+    res.json(decorateSubcontractor(sub!));
   } catch (err) {
     next(err);
   }

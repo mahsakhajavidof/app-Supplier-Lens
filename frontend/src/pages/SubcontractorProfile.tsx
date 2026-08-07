@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useToast } from "../lib/toast";
+import { useActingManagerId } from "../lib/currentUser";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
@@ -36,15 +37,28 @@ export function SubcontractorProfile() {
   const [tab, setTab] = useState<TabKey>("overview");
   const [modal, setModal] = useState<"task" | "note" | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const actingUserId = useActingManagerId();
 
   const { data: sub } = useQuery({
     queryKey: ["subcontractor", id],
     queryFn: () => api.subcontractors.get(id!),
     enabled: !!id,
   });
+  const { data: team } = useQuery({ queryKey: ["team"], queryFn: api.settings.team });
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["subcontractor", id] });
+  }
+
+  async function reassignOwner(ownerId: string) {
+    if (!id || !ownerId || !actingUserId) return;
+    try {
+      await api.subcontractors.updateOwner(id, ownerId, actingUserId);
+      invalidate();
+      flash("Internal responsible updated.");
+    } catch (err) {
+      flash(err instanceof Error ? err.message : "Could not reassign");
+    }
   }
 
   async function sync() {
@@ -89,7 +103,23 @@ export function SubcontractorProfile() {
               <div className="flex flex-wrap gap-x-7 gap-y-1 text-[12.5px]">
                 <InfoItem label="Organisation number" value={formatOrgNr(sub.orgNr)} />
                 <InfoItem label="Main contact" value={sub.contactEmail ?? sub.contactPhone ?? "—"} />
-                <InfoItem label="Internal responsible" value={sub.owner?.name ?? "—"} />
+                <div className="flex flex-col gap-0.5 py-1">
+                  <span className="text-muted">Internal responsible</span>
+                  <select
+                    className="border-none bg-transparent p-0 text-[12.5px] font-medium text-ink outline-none"
+                    value={sub.owner?.id ?? ""}
+                    onChange={(e) => reassignOwner(e.target.value)}
+                  >
+                    <option value="">Unassigned</option>
+                    {team
+                      ?.filter((m) => m.active)
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
                 <InfoItem label="Last data update" value={formatDateTime(sub.lastCheckedAt)} />
               </div>
             </div>

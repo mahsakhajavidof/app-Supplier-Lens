@@ -13,12 +13,18 @@ const id = () =>
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID());
 
+// `role` is a free-text label (e.g. "Manager", "Team member", or a
+// department like "Procurement") — the exact string "Manager" is what the
+// backend's permission check (see lib/permissions.ts) treats as manager
+// access. `email` is optional: real addresses aren't always known up front,
+// and nothing in the app requires one to function.
 export const teamMembers = sqliteTable("team_members", {
   id: id(),
   name: text("name").notNull(),
-  email: text("email").notNull().unique(),
+  email: text("email").unique(),
   role: text("role").notNull(),
   initials: text("initials").notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 

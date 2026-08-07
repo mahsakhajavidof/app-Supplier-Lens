@@ -1,12 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useToast } from "../lib/toast";
+import { useActingManagerId } from "../lib/currentUser";
 import { Card, CardHeader } from "../components/Card";
-import { Button } from "../components/Button";
+import { TeamSection } from "../components/TeamSection";
 
 export function Settings() {
   const queryClient = useQueryClient();
   const { flash } = useToast();
+  const actingUserId = useActingManagerId();
   const { data: sources } = useQuery({ queryKey: ["sources"], queryFn: api.settings.sources });
   const { data: team } = useQuery({ queryKey: ["team"], queryFn: api.settings.team });
   const { data: registries } = useQuery({ queryKey: ["registries"], queryFn: api.settings.registries });
@@ -79,22 +81,7 @@ export function Settings() {
         ))}
       </Card>
 
-      <Card className="overflow-hidden">
-        <CardHeader title="Team" />
-        {(team ?? []).map((m) => (
-          <div key={m.id} className="flex items-center gap-3.5 border-b border-border px-5 py-3.5 last:border-b-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-chip text-[11.5px] font-semibold text-link">
-              {m.initials}
-            </div>
-            <div className="flex flex-1 flex-col gap-0.5">
-              <span className="text-[13.5px] font-medium">{m.name}</span>
-              <span className="text-xs text-muted">{m.email}</span>
-            </div>
-            <span className="text-[12.5px] text-muted">{m.role}</span>
-            <span className="text-xs text-muted">{m.assignedCount ?? 0} assigned</span>
-          </div>
-        ))}
-      </Card>
+      <TeamSection team={team ?? []} actingUserId={actingUserId} />
     </div>
   );
 }

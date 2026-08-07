@@ -6,9 +6,10 @@
 export interface TeamMember {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   role: string;
   initials: string;
+  active: boolean;
   assignedCount?: number;
 }
 

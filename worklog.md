@@ -456,3 +456,189 @@ create → query invalidation → filters refetch).
   `8af9ecb`).
 - Pull request: #9, merged into `main`.
 - Merge: done.
+
+## 2026-08-07 — Team-member system: remove demo data, add manager-gated team management
+
+### Summary
+
+- Replaced the five fictional seeded team members (Marte Solberg, Jonas Vik, Ida
+  Bremnes, Henrik Aune, Camilla Fossum) with exactly two real members:
+  **Mohammad Khajavi** (role `Manager`) and **Linda Roed** (role `Team member`).
+  No email addresses were invented — `email` was made optional in the schema
+  (backend rule 3 explicitly permitted this) and both are stored with no email.
+- Added a schema `active` flag on `team_members` (default `true`) so members can
+  be deactivated instead of deleted, preserving historical attribution.
+- Added a **manager permission model**: `backend/src/lib/permissions.ts` exports
+  `requireManager`, an Express middleware that reads an acting team member id
+  from the `x-team-member-id` request header, loads that member, and requires
+  `active && role === "Manager"` — enforced on the server for every
+  team-management and supplier-reassignment route, not just hidden in the UI.
+  There is no sign-in system in this app (out of scope per the task), so this is
+  explicitly a placeholder identity mechanism, not authentication; the frontend
+  (`frontend/src/lib/currentUser.ts`) sends the current active manager's id for
+  now, with the header read being the one place to swap in a real session's user
+  id once auth exists. This was a deliberate, documented design decision — not a
+  gap I missed.
+- Added team-management routes (manager-only): `POST /api/settings/team` (add),
+  `PATCH /api/settings/team/:id` (edit name/role, or activate/deactivate).
+  Deactivating a member who still owns suppliers or has open (non-`COMPLETED`)
+  tasks requires a `reassignToId` (an other, active member) — the route
+  reassigns those suppliers and tasks in the same operation, then deactivates.
+  Without one, it responds `409` with the exact counts, never leaving orphaned
+  ownership.
+- Added `PATCH /api/subcontractors/:id` (manager-only) to assign/reassign a
+  supplier's internal owner — the only place in the app that could previously
+  set an owner was subcontractor creation.
+- Frontend: `Settings.tsx`'s Team card (`TeamSection.tsx`) now supports add,
+  inline edit, and activate/deactivate-with-reassignment, reusing the existing
+  toggle/badge visual patterns already used elsewhere on the page. The
+  subcontractor profile's "Internal responsible" field is now an editable
+  dropdown (previously read-only, and there was no other way to change an
+  existing supplier's owner at all). All three owner-assignment dropdowns
+  (`AddSubcontractorModal`, `TaskModal`, the profile page) now filter to
+  `active` members only.
+- **Data cleanup**: `backend/src/db/teamCleanup.ts` exports `REQUIRED_MEMBERS`
+  (the single source of truth for "Mohammad + Linda", also imported by
+  `seed.ts` so the fresh-seed and cleanup paths can never drift apart) and
+  `runTeamCleanup(db)`, which upserts the two required members, then for every
+  *other* team member: reassigns their subcontractors, tasks (open and
+  completed — nothing is left dangling), events, and notes to Mohammad, then
+  deletes them. Nothing is ever deleted except the demo member row itself — no
+  supplier, task, event, note, financial-year, document, or registry snapshot
+  is touched beyond re-pointing its owner/author. `backend/src/db/cleanupTeam.ts`
+  is the thin runnable script (`npm run cleanup:team`); the logic is
+  dependency-injected on `db` so it's independently testable without the app's
+  singleton connection.
+- `backend/src/index.ts` was split into `app.ts` (builds the Express app, no
+  side effects) and a thin `index.ts` (migrates, then listens) so tests can
+  import the real app and drive it over HTTP without starting a second server
+  on the same port.
+
+### Bugs found and fixed along the way
+
+- **Migration 0002 (adding `active`, making `email` nullable) crashed the
+  server on every startup.** SQLite can't drop a `NOT NULL` constraint
+  directly, so drizzle-kit generates a warning comment instead of SQL and
+  requires the standard recreate-table migration to be hand-written — which I
+  did, but left drizzle-kit's original leading `/* comment */` as its own
+  chunk before the first `--> statement-breakpoint`. Drizzle's migrator
+  executes every breakpoint-delimited chunk as a literal statement with no
+  filtering, and better-sqlite3 throws `RangeError: The supplied SQL string
+  contains no statements` on a comment-only chunk. Fixed by merging the
+  comment into the same chunk as the first real `ALTER TABLE` statement (as
+  `--` line comments preceding it, not a standalone `/* */` block). Migration
+  ran successfully afterward on both a disposable copy and the real `dev.db`.
+  This bug was latent from the moment the migration was generated; because
+  `runMigrations()` only re-runs when the backend process restarts, and the
+  local backend hadn't been restarted since, it went unnoticed until this
+  task's verification step deliberately restarted it.
+- **`better-sqlite3`'s native binary was destroyed by an errant `npm rebuild`.**
+  While investigating an ABI mismatch (this machine's `node` on PATH is v24,
+  but the project's `node_modules` were built against the v22 the long-running
+  dev servers actually run under, and there is no C++ toolchain installed to
+  rebuild for v24), an `npm rebuild better-sqlite3` under v24 deleted the
+  working v22 binary before failing (no Visual Studio found) — taking the live
+  backend down. Recovered by finding the original prebuilt binary already
+  cached at `%LOCALAPPDATA%\npm-cache\_prebuilds\` and extracting it back into
+  `node_modules/better-sqlite3/{build/Release,lib/binding/node-v127-win32-x64}`
+  directly, with no rebuild needed. No source file was affected by this
+  incident; noted here only because rule 4 asks for every command and decision
+  to be on record, and because it's the reason backend test/build commands in
+  this session run via a copy of Node v22 rather than the v24 on PATH.
+
+### Files changed
+
+- `backend/src/db/schema.ts` — `teamMembers.active`, nullable `email`.
+- `backend/drizzle/0002_harsh_natasha_romanoff.sql`, `backend/drizzle/meta/0002_snapshot.json`,
+  `backend/drizzle/meta/_journal.json` — the migration (see bug note above).
+- `backend/src/lib/permissions.ts` (new) — `requireManager`, `isManagerRole`.
+- `backend/src/routes/settings.ts` — `active` in `GET /team`; new `POST /team`,
+  `PATCH /team/:id`.
+- `backend/src/routes/subcontractors.ts` — new `PATCH /:id` (owner reassignment).
+- `backend/src/routes/subcontractorSchemas.ts` (new) — zod schemas extracted
+  from `subcontractors.ts` to keep it under the 250-line limit after the new route.
+- `backend/src/db/teamCleanup.ts` (new) — `REQUIRED_MEMBERS`, `upsertRequiredMembers`,
+  `runTeamCleanup` (dependency-injected on `db`).
+- `backend/src/db/cleanupTeam.ts` (rewritten) — thin script wrapper, now
+  `npm run cleanup:team`.
+- `backend/src/db/seed.ts` — seeds only `REQUIRED_MEMBERS`; every demo
+  subcontractor/event/task/note owner reference remapped from the five old
+  fictional names to Mohammad/Linda (same relative distribution, e.g. Marte
+  Solberg → Mohammad Khajavi, Jonas Vik → Linda Roed).
+- `backend/src/app.ts` (new) / `backend/src/index.ts` (thinned) — app/server split.
+- `backend/package.json` — added `cleanup:team` script.
+- `frontend/src/components/TeamSection.tsx` (new) — the Team card's management UI.
+- `frontend/src/lib/currentUser.ts` (new) — `useActingManagerId` placeholder.
+- `frontend/src/lib/api.ts` — fixed a header-merging bug in `request()` (a
+  custom `headers` object previously replaced the default `Content-Type`
+  entirely instead of merging with it — latent until this change's manager-only
+  calls became the first callers to pass custom headers); added
+  `addTeamMember`, `updateTeamMember`, `subcontractors.updateOwner`.
+- `frontend/src/types.ts` — `TeamMember.active`, `email` now nullable.
+- `frontend/src/pages/Settings.tsx` — renders `TeamSection` instead of a
+  read-only list.
+- `frontend/src/pages/SubcontractorProfile.tsx` — "Internal responsible" is now
+  an editable dropdown.
+- `frontend/src/components/AddSubcontractorModal.tsx`, `frontend/src/components/TaskModal.tsx`
+  — "Assigned employee" dropdowns filter to active members only.
+- Tests (see below): `backend/src/db/teamCleanup.test.ts`,
+  `backend/src/routes/teamManagement.test.ts`,
+  `frontend/src/components/TeamSection.test.tsx`, plus additions to
+  `frontend/src/components/AddSubcontractorModal.test.tsx`.
+- `backend/package.json` test script glob extended to `src/db/*.test.ts` and
+  `src/routes/*.test.ts` (previously only `src/services/registryProviders/*.test.ts`).
+
+### Tests added (12 new, all passing)
+
+Backend — `teamCleanup.test.ts` (4, isolated throwaway SQLite files, no
+singleton): `REQUIRED_MEMBERS` is exactly Mohammad (Manager)/Linda (Team
+member); a fresh database ends up with exactly those two and nothing removed;
+a demo member's supplier/tasks(open+completed)/events/notes are all reassigned
+to Mohammad with zero orphaned references and the supplier itself preserved;
+running cleanup twice is a no-op the second time with no duplicates.
+
+Backend — `teamManagement.test.ts` (4, real Express app over real HTTP on an
+ephemeral loopback port, throwaway database): a non-manager is rejected (403)
+adding a member, a manager succeeds; same for editing a member; deactivating a
+member with assignments is blocked (409) without `reassignToId`, then succeeds
+and moves ownership when one is given; a non-manager is rejected reassigning a
+supplier's owner, a manager succeeds.
+
+Frontend — `TeamSection.test.tsx` (4): adding a member calls the API with
+trimmed values and the acting manager's id; editing saves the new name/role;
+activating an inactive member calls the API directly with no picker;
+deactivating shows only *other active* members as reassignment targets and
+requires picking one before confirming.
+
+Frontend — `AddSubcontractorModal.test.tsx` (+1): the "Assigned employee"
+dropdown lists only active team members.
+
+### Validation results
+
+- Backend tests: 25/25 passed (17 pre-existing registry tests unaffected + 8 new).
+- Backend TypeScript build: passed.
+- Frontend tests: 22/22 passed (17 pre-existing + 5 new: 4 `TeamSection` + 1 active-filter).
+- Frontend type check and production build: passed.
+- Cleanup script tested against a disposable copy of `dev.db` first (per the
+  task's explicit instruction): removed the same 5 demo members, reassigned
+  correctly, zero orphaned references, 0 subcontractors lost. Then run against
+  the real `dev.db`: same result — team is now exactly Mohammad Khajavi
+  (Manager) and Linda Roed (Team member), confirmed via `GET
+  /api/settings/team`; re-run a second time immediately after removed 0
+  members (idempotent). The two subcontractor records already in `dev.db` from
+  earlier verification work (`TESCO PLC`, `EQUINOR ASA`) were untouched by
+  cleanup — neither had an owner, so there was nothing to reassign — and both
+  are still present with their data intact.
+- Fresh-seed path verified separately against a disposable database (never the
+  real `dev.db`, since seeding deletes existing data): `npm run seed` produced
+  exactly the 2 required members and correctly attributed all 10 demo
+  subcontractors' ownership between them.
+- No `.env`, secrets, or unrelated files were committed; `*.db`/`*.db-wal`/`*.db-shm`
+  remain gitignored, and the temporary verification scripts and disposable
+  database files used above were deleted after use, not committed.
+
+### Delivery
+
+- Commit: pending (written before commit, per rule 4).
+- Pull request: pending.
+- Merge: pending.
