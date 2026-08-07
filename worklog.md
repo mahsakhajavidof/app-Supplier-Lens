@@ -929,6 +929,7 @@ outage is shown as an error, never as an empty result.
 
 ### Delivery
 
-- Commit: pending.
-- Pull request: pending.
-- Merge: pending.
+- Commit: `7caee10` on branch `codex/denmark-registry-integration` (squash-merged as
+  `79afbdc`).
+- Pull request: #12, merged into `main`.
+- Merge: done.
