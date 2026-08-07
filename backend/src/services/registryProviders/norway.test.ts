@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { norwayProvider } from "./norway.js";
+import { RegistryProviderError } from "./types.js";
 
 test("Norway lookup enriches a company with roles, auditor, capital and accounts", async () => {
   const originalFetch = globalThis.fetch;
@@ -70,6 +71,74 @@ test("Norway lookup enriches a company with roles, auditor, capital and accounts
       liquidityRatio: 1.5,
       employees: 12,
     }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Norway lookup normalizes an organisation number containing spaces", async () => {
+  const originalFetch = globalThis.fetch;
+  const requested: string[] = [];
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    requested.push(url);
+    if (url.endsWith("/roller")) return Response.json({});
+    if (url.includes("regnskapsregisteret")) return Response.json([]);
+    return Response.json({ organisasjonsnummer: "923609016", navn: "EQUINOR ASA" });
+  };
+  try {
+    const company = await norwayProvider.lookup("923 609 016");
+    assert.equal(company.orgNr, "923609016");
+    assert.ok(requested[0].endsWith("/enheter/923609016"));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Norway lookup rejects an organisation number that isn't exactly 9 digits", async () => {
+  const originalFetch = globalThis.fetch;
+  let called = false;
+  globalThis.fetch = async () => {
+    called = true;
+    return Response.json({});
+  };
+  try {
+    await assert.rejects(
+      () => norwayProvider.lookup("12345"),
+      (err: unknown) => err instanceof RegistryProviderError && err.status === 400
+    );
+    assert.equal(called, false, "an invalid org number should never reach the network");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Norway lookup distinguishes no-match (404) from a registry outage (500)", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response(null, { status: 404 });
+    await assert.rejects(
+      () => norwayProvider.lookup("923609016"),
+      (err: unknown) => err instanceof RegistryProviderError && err.status === 404
+    );
+
+    globalThis.fetch = async () => new Response(null, { status: 500 });
+    await assert.rejects(
+      () => norwayProvider.lookup("923609016"),
+      (err: unknown) => err instanceof RegistryProviderError && err.status === 502
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Norway lookup propagates a network failure instead of swallowing it", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error("ENOTFOUND data.brreg.no");
+  };
+  try {
+    await assert.rejects(() => norwayProvider.lookup("923609016"), /ENOTFOUND/);
   } finally {
     globalThis.fetch = originalFetch;
   }

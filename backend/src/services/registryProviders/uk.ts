@@ -51,7 +51,8 @@ export const ukProvider: CompanyRegistryProvider = {
     if (!key) {
       throw new RegistryProviderError(
         "Companies House is not configured. Set COMPANIES_HOUSE_API_KEY in backend/.env — get a free key at " +
-          "https://developer.company-information.service.gov.uk/"
+          "https://developer.company-information.service.gov.uk/",
+        400
       );
     }
     const cleaned = orgNr.replace(/\s+/g, "");
@@ -62,11 +63,17 @@ export const ukProvider: CompanyRegistryProvider = {
         Authorization: `Basic ${Buffer.from(`${key}:`).toString("base64")}`,
       },
     });
+    if (res.status === 401) {
+      throw new RegistryProviderError(
+        "Companies House rejected the configured API key (401 Unauthorized). Check COMPANIES_HOUSE_API_KEY in backend/.env.",
+        401
+      );
+    }
     if (res.status === 404) {
-      throw new RegistryProviderError(`No company found in Companies House for number ${orgNr}`);
+      throw new RegistryProviderError(`No company found in Companies House for number ${orgNr}`, 404);
     }
     if (!res.ok) {
-      throw new RegistryProviderError(`Companies House lookup failed (${res.status})`);
+      throw new RegistryProviderError(`Companies House lookup failed (${res.status})`, 502);
     }
     const data = (await res.json()) as CompaniesHouseProfile;
 
@@ -87,16 +94,27 @@ export const ukProvider: CompanyRegistryProvider = {
   // the profile lookup above) that matches on name or company number as you
   // type, so partial input works here unlike the exact-match /company/:number.
   async search(query: string): Promise<CompanySearchResult[]> {
-    const key = apiKey();
     const q = query.trim();
-    if (!key || !q) return [];
+    if (!q) return [];
+    const key = apiKey();
+    if (!key) {
+      throw new RegistryProviderError("Companies House is not configured (missing API key)", 400);
+    }
     const res = await fetch(`${BASE_URL}/search/companies?q=${encodeURIComponent(q)}&items_per_page=8`, {
       headers: {
         Accept: "application/json",
         Authorization: `Basic ${Buffer.from(`${key}:`).toString("base64")}`,
       },
     });
-    if (!res.ok) return [];
+    if (res.status === 401) {
+      throw new RegistryProviderError(
+        "Companies House rejected the configured API key (401 Unauthorized). Check COMPANIES_HOUSE_API_KEY in backend/.env.",
+        401
+      );
+    }
+    if (!res.ok) {
+      throw new RegistryProviderError(`Companies House search failed (${res.status})`, 502);
+    }
     const data = (await res.json()) as { items?: CompaniesHouseSearchItem[] };
     return (data.items ?? []).map((item) => ({
       orgNr: item.company_number,

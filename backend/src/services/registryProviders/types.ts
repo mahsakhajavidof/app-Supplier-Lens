@@ -68,8 +68,12 @@ export interface CompanyRegistryProvider {
   search(query: string): Promise<CompanySearchResult[]>;
 }
 
+// `status` is the HTTP status the API route should respond with (e.g. 400 for
+// a missing key, 401 for a rejected one, 404 for no match, 502 for an
+// unreachable/erroring registry) — so callers can distinguish failure modes
+// instead of reporting every registry error the same way.
 export class RegistryProviderError extends Error {
-  constructor(message: string, readonly cause?: unknown) {
+  constructor(message: string, readonly status: number = 502) {
     super(message);
     this.name = "RegistryProviderError";
   }

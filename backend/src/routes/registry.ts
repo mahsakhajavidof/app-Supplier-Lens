@@ -17,15 +17,19 @@ registryRouter.get("/search/:country", async (req, res, next) => {
   try {
     const provider = getProvider(req.params.country);
     const q = typeof req.query.q === "string" ? req.query.q : "";
-    if (!provider || !provider.isConfigured() || q.trim().length < 2) {
+    if (!provider || q.trim().length < 2) {
       res.json([]);
+      return;
+    }
+    if (!provider.isConfigured()) {
+      res.status(400).json({ error: `${provider.registryName} is not configured (missing API key)` });
       return;
     }
     const results = await provider.search(q);
     res.json(results);
   } catch (err) {
     if (err instanceof RegistryProviderError) {
-      res.json([]);
+      res.status(err.status).json({ error: err.message });
       return;
     }
     next(err);
@@ -51,7 +55,7 @@ registryRouter.get("/lookup/:country/:orgNr", async (req, res, next) => {
     res.json(record);
   } catch (err) {
     if (err instanceof RegistryProviderError) {
-      res.status(502).json({ error: err.message });
+      res.status(err.status).json({ error: err.message });
       return;
     }
     next(err);

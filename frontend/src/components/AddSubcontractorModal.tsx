@@ -3,11 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { Modal, Field, inputClass } from "./Modal";
 import { Button } from "./Button";
+import { RegistryCompanySearch } from "./RegistryCompanySearch";
 import type { RegistryLookupResult, RegistrySearchResult, Subcontractor } from "../types";
-
-// Friendly names for the country codes registry providers serve. Falls back
-// to the raw code for any provider added later without an entry here.
-const COUNTRY_NAMES: Record<string, string> = { NO: "Norway", GB: "United Kingdom" };
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -37,11 +34,11 @@ export function AddSubcontractorModal({
   // As-you-type company suggestions, shown under whichever of company
   // name / org number the user is currently typing into.
   const [suggestions, setSuggestions] = useState<RegistrySearchResult[]>([]);
+  const [searchError, setSearchError] = useState("");
   const [activeField, setActiveField] = useState<"company" | "orgNr" | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const requestSeq = useRef(0);
 
-  const selectedProvider = registries?.find((r) => r.country === country);
   const canLookUp = !!country && !!orgNr.trim() && !lookingUp;
 
   useEffect(() => () => clearTimeout(debounceRef.current), []);
@@ -49,6 +46,7 @@ export function AddSubcontractorModal({
   function scheduleSuggestionSearch(field: "company" | "orgNr", query: string) {
     setActiveField(field);
     clearTimeout(debounceRef.current);
+    setSearchError("");
     if (!country || query.trim().length < 2) {
       setSuggestions([]);
       return;
@@ -57,9 +55,15 @@ export function AddSubcontractorModal({
     debounceRef.current = setTimeout(async () => {
       try {
         const results = await api.registry.search(country, query.trim());
-        if (seq === requestSeq.current) setSuggestions(results);
-      } catch {
-        if (seq === requestSeq.current) setSuggestions([]);
+        if (seq === requestSeq.current) {
+          setSuggestions(results);
+          setSearchError("");
+        }
+      } catch (err) {
+        if (seq === requestSeq.current) {
+          setSuggestions([]);
+          setSearchError(err instanceof Error ? err.message : "Registry search failed");
+        }
       }
     }, SEARCH_DEBOUNCE_MS);
   }
@@ -71,6 +75,7 @@ export function AddSubcontractorModal({
     setLookupResult(null);
     setLookupError("");
     setSuggestions([]);
+    setSearchError("");
   }
   function updateOrgNr(value: string) {
     setOrgNr(value);
@@ -83,6 +88,9 @@ export function AddSubcontractorModal({
     scheduleSuggestionSearch("company", value);
   }
 
+  // Picking a suggestion is the whole point of searching — it must land the
+  // user on a completed, confirmed lookup, not a filled-in form waiting for
+  // another button press.
   function pickSuggestion(s: RegistrySearchResult) {
     setCompany(s.name);
     setOrgNr(s.orgNr);
@@ -90,6 +98,7 @@ export function AddSubcontractorModal({
     setLookupError("");
     setSuggestions([]);
     setActiveField(null);
+    void runLookup(s.orgNr);
   }
 
   // Suggestion buttons use onMouseDown+preventDefault to pick before this
@@ -99,13 +108,17 @@ export function AddSubcontractorModal({
     setActiveField(null);
   }
 
-  async function runLookup() {
-    if (!canLookUp) return;
+  // Accepts an explicit org number so pickSuggestion() can trigger the
+  // lookup immediately with the value just selected, rather than reading
+  // `orgNr` state that React hasn't re-rendered with yet.
+  async function runLookup(overrideOrgNr?: string) {
+    const nr = (overrideOrgNr ?? orgNr).trim();
+    if (!country || !nr || lookingUp) return;
     setSuggestions([]);
     setLookingUp(true);
     setLookupError("");
     try {
-      const result = await api.registry.lookup(country, orgNr.trim());
+      const result = await api.registry.lookup(country, nr);
       setLookupResult(result);
       if (!company.trim()) setCompany(result.name);
     } catch (err) {
@@ -155,79 +168,26 @@ export function AddSubcontractorModal({
         </>
       }
     >
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Country">
-          <select className={inputClass} value={country} onChange={(e) => updateCountry(e.target.value)}>
-            <option value="">Select country…</option>
-            {registries?.map((r) => (
-              <option key={r.country} value={r.country}>
-                {COUNTRY_NAMES[r.country] ?? r.country}
-                {!r.configured ? " (registry needs API key)" : ""}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <div className="relative flex flex-col gap-1.5">
-          <Field label="Organisation / company number">
-            <input
-              className={inputClass}
-              value={orgNr}
-              onChange={(e) => updateOrgNr(e.target.value)}
-              onFocus={() => setActiveField("orgNr")}
-              onBlur={dismissSuggestions}
-              placeholder="e.g. 923609016"
-              autoComplete="off"
-            />
-          </Field>
-          {activeField === "orgNr" && suggestions.length > 0 && (
-            <SuggestionDropdown suggestions={suggestions} onPick={pickSuggestion} />
-          )}
-        </div>
-      </div>
-
-      <div className="relative flex flex-col gap-1.5">
-        <Field label="Company name">
-          <input
-            className={inputClass}
-            value={company}
-            onChange={(e) => updateCompany(e.target.value)}
-            onFocus={() => setActiveField("company")}
-            onBlur={dismissSuggestions}
-            placeholder={country ? "Start typing to search the registry…" : "Company name"}
-            autoComplete="off"
-          />
-        </Field>
-        {activeField === "company" && suggestions.length > 0 && (
-          <SuggestionDropdown suggestions={suggestions} onPick={pickSuggestion} />
-        )}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <Button onClick={runLookup} disabled={!canLookUp}>
-          {lookingUp ? "Looking up…" : "Look up in registry"}
-        </Button>
-        {!country && <span className="text-xs text-muted">Select a country to enable search and lookup.</span>}
-        {selectedProvider && !selectedProvider.configured && (
-          <span className="text-xs text-muted">{selectedProvider.registryName} needs an API key — see Settings.</span>
-        )}
-      </div>
-
-      {lookupError && (
-        <div className="rounded-md border border-danger-border bg-danger-bg px-3.5 py-2.5 text-[12.5px] text-danger-fg">
-          {lookupError}
-        </div>
-      )}
-
-      {lookupResult && (
-        <div className="flex flex-col gap-1.5 rounded-md bg-surface-subtle p-3.5 text-[12.5px]">
-          <span className="font-medium">Found: {lookupResult.name}</span>
-          <span className="text-muted">
-            {[lookupResult.legalForm, lookupResult.companyStatus, lookupResult.address].filter(Boolean).join(" · ") ||
-              "No further details returned."}
-          </span>
-          <span className="text-muted">This will be saved as the subcontractor's starting profile.</span>
-        </div>
-      )}
+      <RegistryCompanySearch
+        registries={registries}
+        country={country}
+        onCountryChange={updateCountry}
+        orgNr={orgNr}
+        onOrgNrChange={updateOrgNr}
+        company={company}
+        onCompanyChange={updateCompany}
+        activeField={activeField}
+        onFocusField={setActiveField}
+        onBlurField={dismissSuggestions}
+        suggestions={suggestions}
+        onPickSuggestion={pickSuggestion}
+        searchError={searchError}
+        canLookUp={canLookUp}
+        lookingUp={lookingUp}
+        onLookup={() => runLookup()}
+        lookupError={lookupError}
+        lookupResult={lookupResult}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Category">
@@ -262,36 +222,5 @@ export function AddSubcontractorModal({
         </div>
       )}
     </Modal>
-  );
-}
-
-function SuggestionDropdown({
-  suggestions,
-  onPick,
-}: {
-  suggestions: RegistrySearchResult[];
-  onPick: (s: RegistrySearchResult) => void;
-}) {
-  return (
-    <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-md border border-border bg-white shadow-lg">
-      {suggestions.map((s) => (
-        <button
-          key={s.orgNr}
-          type="button"
-          // onMouseDown (not onClick) so this fires before the input's onBlur
-          // would otherwise close the dropdown first.
-          onMouseDown={(e) => {
-            e.preventDefault();
-            onPick(s);
-          }}
-          className="flex w-full flex-col gap-0.5 border-b border-border px-3.5 py-2.5 text-left last:border-b-0 hover:bg-surface-subtle"
-        >
-          <span className="text-[13px] font-medium">{s.name}</span>
-          <span className="text-xs text-muted">
-            {[s.orgNr, s.legalForm, s.address].filter(Boolean).join(" · ")}
-          </span>
-        </button>
-      ))}
-    </div>
   );
 }
