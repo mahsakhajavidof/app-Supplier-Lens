@@ -1,10 +1,11 @@
 import { CompanyRegistryProvider, NormalizedCompanyRecord } from "./types.js";
 import { norwayProvider } from "./norway.js";
 import { ukProvider } from "./uk.js";
+import { denmarkProvider } from "./denmark.js";
 
 // Add a new country by implementing CompanyRegistryProvider in its own file
 // and listing it here. Nothing else in the app needs to change.
-const PROVIDERS: CompanyRegistryProvider[] = [norwayProvider, ukProvider];
+const PROVIDERS: CompanyRegistryProvider[] = [norwayProvider, ukProvider, denmarkProvider];
 
 const byCountry = new Map(PROVIDERS.map((p) => [p.country, p]));
 
@@ -38,14 +39,21 @@ export interface DetectedChange {
   currentValue: string;
 }
 
-/** Compare two normalized snapshots and return a human-readable list of what changed. */
+/**
+ * Compare two normalized snapshots and return a human-readable list of what
+ * changed. `extraFields` lets a specific country watch additional fields
+ * (e.g. Denmark also watches legal form and registration date) without
+ * changing what NO/GB compare — every existing call site keeps calling this
+ * with no third argument and sees exactly the same six fields as before.
+ */
 export function diffSnapshots(
   previous: NormalizedCompanyRecord | null,
-  current: NormalizedCompanyRecord
+  current: NormalizedCompanyRecord,
+  extraFields: { key: keyof NormalizedCompanyRecord; label: string }[] = []
 ): DetectedChange[] {
   if (!previous) return [];
   const changes: DetectedChange[] = [];
-  for (const { key, label } of WATCHED_FIELDS) {
+  for (const { key, label } of [...WATCHED_FIELDS, ...extraFields]) {
     const prevVal = previous[key];
     const curVal = current[key];
     const prevStr = prevVal === undefined || prevVal === null ? "" : String(prevVal);
