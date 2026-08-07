@@ -362,3 +362,96 @@ network/backend is involved):
   `e7c2d35`).
 - Pull request: #8, merged into `main`.
 - Merge: done.
+
+## 2026-08-07 — Replace the free-text Category field with a predefined dropdown
+
+### Summary
+
+- Replaced the Add-subcontractor form's Category text input + `<datalist>` (which
+  didn't behave like a real dropdown — Chrome's datalist UI still lets/encourages
+  free typing) with a real `<select>` of the 13 predefined categories from the
+  supplied chart, in the specified order, plus "Other" as the final option.
+- Selecting "Other" reveals a separate, required "Custom category" text input.
+  The literal value "Other" is never saved — the reported/saved category is either
+  the chosen predefined value or the trimmed custom text; an empty or
+  whitespace-only custom value reports `""`, which the form's existing
+  `!category.trim()` validation already blocks from being submitted (no new
+  validation logic needed there).
+- Switching from "Other" back to a predefined category hides and clears the
+  custom input; switching back to "Other" again shows it empty, not the old value.
+- This is a frontend-only change. The backend already accepts and stores any
+  category string (`z.string().min(1)`, plain `text` column) and the existing
+  `/subcontractors/meta/filters` endpoint already dedupes whatever's actually
+  stored — both predefined and custom categories, and every pre-existing legacy
+  category value (e.g. the seed data's "Electrical", "HVAC", "Groundworks", none
+  of which are in the new predefined list), continue to work unchanged in the
+  subcontractor list, its category filter, and (checked) reports and subcontractor
+  detail pages, neither of which reference `category` at all today.
+- The frontend previously fetched `/subcontractors/meta/filters` inside the
+  Add-subcontractor modal purely to populate the old datalist; that query is now
+  unused and was removed along with it.
+
+### Files changed
+
+- `frontend/src/components/CategoryField.tsx` (new) — the dropdown + conditional
+  custom input, and the exported `PREDEFINED_CATEGORIES` list (the one place this
+  list is defined, per the task's "define it once" guidance).
+- `frontend/src/components/AddSubcontractorModal.tsx` — swapped the old
+  input+datalist block for `<CategoryField onChange={setCategory} />`; removed the
+  now-unused `subcontractor-filters` query. No other behavior, layout, or styling
+  changed.
+- `frontend/src/components/CategoryField.test.tsx` (new).
+- `frontend/src/components/AddSubcontractorModal.test.tsx` (extended) — two new
+  tests for submit-gating and never-saving "Other"; removed the now-unneeded
+  `subcontractors.filters` mock.
+- `frontend/src/pages/SubcontractorsList.test.tsx` (new) — the category-filter
+  integration tests.
+
+### Tests added (13 total)
+
+`CategoryField.test.tsx` (7): predefined categories render in the exact required
+order with "Other" last and the "Select category…" placeholder first; selecting a
+predefined category reports that exact value; selecting "Other" reveals the
+custom input; selecting "Other" with no text reports `""` and never `"Other"`;
+typing a custom value trims whitespace before reporting it; a whitespace-only
+custom value reports `""`; switching away from "Other" hides and clears the
+custom input, and selecting "Other" again shows it empty.
+
+`AddSubcontractorModal.test.tsx` (+2): choosing a predefined category enables
+submit and saves that exact value; choosing "Other" keeps submit disabled until a
+non-empty custom value is entered, then saves the trimmed custom value and never
+the literal "Other".
+
+`SubcontractorsList.test.tsx` (2, new file): a legacy category already in the
+data (not in the predefined list) still appears in the category filter, proving
+existing stored categories are unaffected; a custom category created through
+"Other" appears in the category filter after creation (full mocked round trip:
+create → query invalidation → filters refetch).
+
+### Validation results
+
+- Frontend tests (`npm test`, frontend): 17/17 passed (7 new + 2 new + 2 new + 6
+  pre-existing from the prior fix, all still green).
+- Frontend type check (`npm run lint`) and production build (`npm run build`):
+  both passed.
+- Backend tests (`npm test`, backend) and build (`npm run build`): 17/17 passed,
+  build clean — unaffected, as expected for a frontend-only change.
+- Live verification, driven in a headless browser against the running app:
+  created one subcontractor with a predefined category (`EQUINOR ASA` /
+  `923609016`, category "Bunkering") and one via "Other" with a custom value
+  (`TESCO PLC` / `00445790`, typed "  Diving Support  ") — both saved with the
+  exact expected category (leading/trailing whitespace trimmed, "Other" never
+  saved), both appear correctly in the subcontractor list, and the category
+  filter dropdown correctly now offers "Bunkering" and "Diving Support" alongside
+  "All categories". No relevant console errors (one pre-existing, unrelated
+  `favicon.ico` 404, and one correct `409 Conflict` from the verification script
+  itself re-submitting an org number it had already created in an earlier run).
+- These two records are real, intentionally-created verification data (per this
+  task's own instruction to verify creation live) — no existing data was deleted
+  or modified, and no delete endpoint exists to remove them again.
+
+### Delivery
+
+- Commit: pending (written before commit, per rule 4).
+- Pull request: pending.
+- Merge: pending.

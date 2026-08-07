@@ -7,7 +7,7 @@ import { api } from "../lib/api";
 vi.mock("../lib/api", () => ({
   api: {
     settings: { team: vi.fn(), registries: vi.fn() },
-    subcontractors: { filters: vi.fn(), create: vi.fn() },
+    subcontractors: { create: vi.fn() },
     registry: { search: vi.fn(), lookup: vi.fn() },
   },
 }));
@@ -47,7 +47,6 @@ async function selectCountry(label: string, value: string) {
 beforeEach(() => {
   vi.mocked(api.settings.team).mockResolvedValue([]);
   vi.mocked(api.settings.registries).mockResolvedValue(REGISTRIES);
-  vi.mocked(api.subcontractors.filters).mockResolvedValue({ categories: [], owners: [] });
 });
 
 afterEach(() => {
@@ -144,5 +143,50 @@ describe("AddSubcontractorModal registry search and lookup", () => {
     await screen.findByText(/Company found:/);
 
     expect(api.subcontractors.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("AddSubcontractorModal category selection", () => {
+  async function fillRequiredFieldsExceptCategory() {
+    vi.mocked(api.registry.search).mockResolvedValue([]);
+    await selectCountry("Norway", "NO");
+    fireEvent.change(screen.getByPlaceholderText("e.g. 923609016"), { target: { value: "923609016" } });
+    fireEvent.change(screen.getByPlaceholderText("Start typing to search the registry…"), {
+      target: { value: "Acme AS" },
+    });
+    return screen.getByRole("button", { name: "Add subcontractor" }) as HTMLButtonElement;
+  }
+
+  test("choosing a predefined category enables submit and saves that exact value", async () => {
+    vi.mocked(api.subcontractors.create).mockResolvedValue({ id: "1", company: "Acme AS" } as never);
+    renderModal();
+    const submitBtn = await fillRequiredFieldsExceptCategory();
+    expect(submitBtn.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "Bunkering" } });
+    expect(submitBtn.disabled).toBe(false);
+
+    fireEvent.click(submitBtn);
+    await waitFor(() =>
+      expect(api.subcontractors.create).toHaveBeenCalledWith(expect.objectContaining({ category: "Bunkering" }))
+    );
+  });
+
+  test("Other requires a non-empty custom value before submit is enabled, and never saves the literal 'Other'", async () => {
+    vi.mocked(api.subcontractors.create).mockResolvedValue({ id: "1", company: "Acme AS" } as never);
+    renderModal();
+    const submitBtn = await fillRequiredFieldsExceptCategory();
+
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "Other" } });
+    expect(submitBtn.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Custom category"), { target: { value: "  Diving Support  " } });
+    expect(submitBtn.disabled).toBe(false);
+
+    fireEvent.click(submitBtn);
+    await waitFor(() =>
+      expect(api.subcontractors.create).toHaveBeenCalledWith(expect.objectContaining({ category: "Diving Support" }))
+    );
+    expect(api.subcontractors.create).not.toHaveBeenCalledWith(expect.objectContaining({ category: "Other" }));
   });
 });

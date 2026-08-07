@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { Modal, Field, inputClass } from "./Modal";
 import { Button } from "./Button";
 import { RegistryCompanySearch } from "./RegistryCompanySearch";
+import { CategoryField } from "./CategoryField";
 import type { RegistryLookupResult, RegistrySearchResult, Subcontractor } from "../types";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -17,7 +18,6 @@ export function AddSubcontractorModal({
 }) {
   const { data: team } = useQuery({ queryKey: ["team"], queryFn: api.settings.team });
   const { data: registries } = useQuery({ queryKey: ["registries"], queryFn: api.settings.registries });
-  const { data: filters } = useQuery({ queryKey: ["subcontractor-filters"], queryFn: api.subcontractors.filters });
 
   const [company, setCompany] = useState("");
   const [country, setCountry] = useState("");
@@ -190,20 +190,7 @@ export function AddSubcontractorModal({
       />
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Category">
-          <input
-            className={inputClass}
-            list="subcontractor-category-options"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. Electrical, Plumbing"
-          />
-          <datalist id="subcontractor-category-options">
-            {filters?.categories.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-        </Field>
+        <CategoryField onChange={setCategory} />
         <Field label="Assigned employee">
           <select className={inputClass} value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Unassigned</option>
