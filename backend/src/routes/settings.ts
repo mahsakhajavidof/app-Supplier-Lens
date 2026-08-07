@@ -5,6 +5,7 @@ import { db } from "../db/index.js";
 import { sources, subcontractors, tasks, teamMembers } from "../db/schema.js";
 import { listProviders } from "../services/registryProviders/index.js";
 import { requireManager } from "../lib/permissions.js";
+import { getCompanyDataStatus } from "../services/companyData.js";
 
 export const settingsRouter = Router();
 
@@ -151,4 +152,10 @@ settingsRouter.patch("/team/:id", requireManager, async (req, res, next) => {
 // Live status of each country registry integration, for the Settings page.
 settingsRouter.get("/registries", async (_req, res) => {
   res.json(listProviders());
+});
+
+// Safe CompanyData.dk configuration status — never touches the key's value,
+// only whether one is present. See services/companyData.ts.
+settingsRouter.get("/companydata-status", async (_req, res) => {
+  res.json(getCompanyDataStatus());
 });

@@ -6,7 +6,7 @@ import type { RegistryLookupResult, RegistryProviderStatus, RegistrySearchResult
 
 // Friendly names for the country codes registry providers serve. Falls back
 // to the raw code for any provider added later without an entry here.
-const COUNTRY_NAMES: Record<string, string> = { NO: "Norway", GB: "United Kingdom" };
+const COUNTRY_NAMES: Record<string, string> = { NO: "Norway", GB: "United Kingdom", DK: "Denmark" };
 
 type ActiveField = "company" | "orgNr" | null;
 

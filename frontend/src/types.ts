@@ -177,6 +177,7 @@ export interface RegistryLookupResult {
   vatRegistered?: boolean;
   address?: string;
   postalAddress?: string;
+  contactPhone?: string;
 }
 
 export interface ReportType {

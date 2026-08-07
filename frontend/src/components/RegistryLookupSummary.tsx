@@ -22,7 +22,9 @@ export function RegistryLookupSummary({ result }: { result: RegistryLookupResult
         {row("Legal form", result.legalForm)}
         {row("Registered on", result.registeredOn)}
         {row("Industry code", result.industryCode)}
+        {row("Employees", result.employees)}
         {row("VAT registered", result.vatRegistered)}
+        {row("Contact phone", result.contactPhone)}
         {result.address && <span className="col-span-2">Registered address: {result.address}</span>}
       </div>
       <span className="text-muted">This will be saved as the subcontractor's starting profile.</span>

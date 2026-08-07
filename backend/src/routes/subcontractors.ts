@@ -1,15 +1,15 @@
 import { Router } from "express";
 import { and, desc, eq, like, or } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { events, registrySnapshots, subcontractors, teamMembers } from "../db/schema.js";
+import { events, subcontractors, teamMembers } from "../db/schema.js";
 import { serializeEvent } from "../lib/labels.js";
 import { decorateSubcontractor } from "../lib/subcontractorSerialization.js";
-import { getProvider, diffSnapshots } from "../services/registryProviders/index.js";
+import { getProvider } from "../services/registryProviders/index.js";
 import { RegistryProviderError } from "../services/registryProviders/types.js";
-import type { NormalizedCompanyRecord } from "../services/registryProviders/types.js";
-import { persistRegistryRecord, profileValues } from "../services/registryPersistence.js";
+import { persistInitialRegistryData, profileValues, syncGenericRegistry } from "../services/registryPersistence.js";
 import { requireManager } from "../lib/permissions.js";
 import { createSubcontractorSchema, reassignOwnerSchema } from "./subcontractorSchemas.js";
+import { checkDanishSupplier } from "../services/denmarkMonitoring.js";
 
 export const subcontractorsRouter = Router();
 
@@ -84,7 +84,7 @@ subcontractorsRouter.post("/", async (req, res, next) => {
       .returning();
 
     if (registryData) {
-      await persistRegistryRecord(created.id, registryData);
+      await persistInitialRegistryData(created.id, country, body.orgNr, registryData);
     }
 
     const sub = await db.query.subcontractors.findFirst({
@@ -183,6 +183,20 @@ subcontractorsRouter.post("/:id/sync", async (req, res, next) => {
       return;
     }
 
+    // Denmark uses its own tagged-snapshot comparison (APICVR basic profile
+    // plus CompanyData enrichment when configured) — the same routine the
+    // weekly monitor uses, so manual and scheduled checks compare identically.
+    if (sub.country === "DK") {
+      const result = await checkDanishSupplier(sub.id);
+      res.json({
+        checked: true,
+        registry: "Danish CVR via APICVR",
+        changesDetected: result.createdEvents.length,
+        events: result.createdEvents.map(serializeEvent),
+      });
+      return;
+    }
+
     const provider = getProvider(sub.country);
     if (!provider) {
       res.status(400).json({ error: `No registry provider configured for country "${sub.country}"` });
@@ -195,43 +209,12 @@ subcontractorsRouter.post("/:id/sync", async (req, res, next) => {
       return;
     }
 
-    const current = await provider.lookup(sub.orgNr);
-
-    const lastSnapshot = await db.query.registrySnapshots.findFirst({
-      where: eq(registrySnapshots.subcontractorId, sub.id),
-      orderBy: [desc(registrySnapshots.fetchedAt)],
-    });
-    const previous = lastSnapshot ? (JSON.parse(lastSnapshot.raw) as NormalizedCompanyRecord) : null;
-
-    const changes = diffSnapshots(previous, current);
-
-    await persistRegistryRecord(sub.id, current);
-
-    const createdEvents = [];
-    for (const c of changes) {
-      const [created] = await db
-        .insert(events)
-        .values({
-          subcontractorId: sub.id,
-          type: `${c.label} changed`,
-          description: `${c.label} changed from "${c.previousValue}" to "${c.currentValue}", detected via ${provider.registryName}.`,
-          attention: "CHANGE_DETECTED",
-          followUp: "UNRESOLVED",
-          source: provider.registryName,
-          previousValue: c.previousValue,
-          currentValue: c.currentValue,
-        })
-        .returning();
-      createdEvents.push(created);
-    }
-
-    await db.update(subcontractors).set({ lastCheckedAt: new Date() }).where(eq(subcontractors.id, sub.id));
-
+    const result = await syncGenericRegistry(sub, provider);
     res.json({
       checked: true,
-      registry: provider.registryName,
-      changesDetected: createdEvents.length,
-      events: createdEvents.map(serializeEvent),
+      registry: result.registry,
+      changesDetected: result.changesDetected,
+      events: result.createdEvents.map(serializeEvent),
     });
   } catch (err) {
     if (err instanceof RegistryProviderError) {

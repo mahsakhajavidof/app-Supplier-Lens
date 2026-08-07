@@ -7,6 +7,17 @@ import { relations, sql } from "drizzle-orm";
 // swap `drizzle-orm/sqlite-core` for `drizzle-orm/pg-core` and the
 // better-sqlite3 driver in db/index.ts for `drizzle-orm/node-postgres` —
 // the table/column shapes below stay the same.
+//
+// NOTE ON FILE SIZE: this file is intentionally kept as one file despite
+// exceeding the project's normal 250-line guideline. Splitting table
+// definitions and their cross-references (e.g. registrySnapshots'/
+// registryCheckLog's FK to subcontractors) into separate files breaks
+// drizzle-kit 0.24.2's schema loader, which does not resolve this project's
+// NodeNext-style `.js`-suffixed relative imports to their sibling `.ts`
+// files (confirmed: `drizzle-kit generate` fails with MODULE_NOT_FOUND on
+// any such split). Fixing that would require a multi-minor-version
+// drizzle-kit upgrade — a larger, unrelated, riskier change than a modest
+// line-count overage on a flat list of table declarations.
 
 const id = () =>
   text("id")
@@ -49,6 +60,14 @@ export const subcontractors = sqliteTable("subcontractors", {
   contactPhone: text("contact_phone"),
   aiSummary: text("ai_summary"),
   ownerId: text("owner_id").references(() => teamMembers.id),
+  // `lastCheckedAt` is the last *successful* registry check (unchanged
+  // meaning — set after a sync completes). The two columns below are
+  // additive, used only by Denmark's weekly monitoring job for now: which
+  // suppliers are due, and when a check was last attempted regardless of
+  // outcome. Every other country leaves them null.
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  lastCheckAttemptedAt: integer("last_check_attempted_at", { mode: "timestamp" }),
+  nextCheckAt: integer("next_check_at", { mode: "timestamp" }),
   lastCheckedAt: integer("last_checked_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
@@ -163,14 +182,49 @@ export const sources = sqliteTable("sources", {
 // Raw snapshot of what a country registry provider returned for a
 // subcontractor at a point in time. Each sync compares the new snapshot
 // against the most recent one and creates Event rows for any differences.
+// `provider`/`dataType`/`hash` are additive — used by Denmark to keep
+// APICVR's basic profile and CompanyData's financials/ownership as distinct,
+// separately-comparable snapshots (see services/registryProviders/denmark.ts
+// and services/companyData.ts). NO/GB continue to write one combined
+// basic-profile snapshot per sync and leave these columns null, exactly as
+// before.
 export const registrySnapshots = sqliteTable("registry_snapshots", {
   id: id(),
   subcontractorId: text("subcontractor_id")
     .notNull()
     .references(() => subcontractors.id, { onDelete: "cascade" }),
   country: text("country").notNull(),
+  provider: text("provider"),
+  dataType: text("data_type"),
+  hash: text("hash"),
   raw: text("raw").notNull(), // JSON-encoded normalized registry payload
   fetchedAt: integer("fetched_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+// A failed provider request, recorded separately from registrySnapshots so
+// an outage or rejected key never masquerades as valid company data. Also
+// doubles as the "last attempted check" / "provider result" audit trail the
+// weekly monitor and manual sync both write to.
+export const registryCheckLog = sqliteTable("registry_check_log", {
+  id: id(),
+  subcontractorId: text("subcontractor_id")
+    .notNull()
+    .references(() => subcontractors.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  dataType: text("data_type"),
+  success: integer("success", { mode: "boolean" }).notNull(),
+  statusCode: integer("status_code"),
+  errorMessage: text("error_message"),
+  checkedAt: integer("checked_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+// One row per calendar month, incremented on every CompanyData.dk call, so
+// the app can warn locally before the Basic plan's 500-call monthly quota is
+// likely to be exceeded. Never stores the API key.
+export const companyDataUsage = sqliteTable("companydata_usage", {
+  id: id(),
+  month: text("month").notNull().unique(), // "YYYY-MM"
+  callCount: integer("call_count").notNull().default(0),
 });
 
 // --- Relations (enables db.query.subcontractors.findMany({ with: {...} })) --
@@ -192,6 +246,7 @@ export const subcontractorsRelations = relations(subcontractors, ({ one, many })
   people: many(people),
   owners: many(ownerships),
   snapshots: many(registrySnapshots),
+  checkLogs: many(registryCheckLog),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -229,4 +284,8 @@ export const ownershipsRelations = relations(ownerships, ({ one }) => ({
 
 export const registrySnapshotsRelations = relations(registrySnapshots, ({ one }) => ({
   subcontractor: one(subcontractors, { fields: [registrySnapshots.subcontractorId], references: [subcontractors.id] }),
+}));
+
+export const registryCheckLogRelations = relations(registryCheckLog, ({ one }) => ({
+  subcontractor: one(subcontractors, { fields: [registryCheckLog.subcontractorId], references: [subcontractors.id] }),
 }));

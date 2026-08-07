@@ -704,3 +704,231 @@ active manager exists in the data.
   `cd3e87a`).
 - Pull request: #11, merged into `main`.
 - Merge: done.
+
+## 2026-08-07 — Add Denmark as a supported country (APICVR + CompanyData.dk)
+
+### Summary
+
+- Added Denmark alongside Norway/UK using two providers: **APICVR**
+  (apicvr.dk) — free, keyless, no signup — for company search, basic profile
+  lookup, and exact CVR (8-digit organisation number) lookup; and
+  **CompanyData.dk** — Bearer-token, key optional, added later by the user —
+  for financial/ownership/management enrichment, isolated to
+  `companyData.ts`/`companyDataMapper.ts` and clearly labeled as a best-effort
+  implementation of a documented-but-unverifiable (no key available to build
+  against) REST convention, correctable in those two files alone once a real
+  key is available.
+- CVR validation is exact 8 digits, normalized from spaces/formatting;
+  APICVR's numeric `vat` field silently drops leading zeros, so the CVR is
+  reconstructed via zero-padding on every read. A well-formed-but-nonexistent
+  CVR returns HTTP 200 with `{"error":"NOT_FOUND"}`, not a 404 — handled by
+  inspecting the body, not just the status, at every call site.
+- Every APICVR/CompanyData failure mode is distinguished and never silently
+  turned into an empty result: invalid CVR format (400, no network call),
+  no match (404), provider outage (502), missing CompanyData key (400),
+  401/403 (key rejected, key value never logged/returned), 404 (no
+  CompanyData record), 429 (surfaces `Retry-After`, no automatic retry loop),
+  and network failure (500, message surfaced).
+- Snapshots are tagged per `(subcontractor, provider, dataType)` — APICVR's
+  basic profile and CompanyData's financials/ownership/management are stored
+  as separate, independently-comparable, UTC-timestamped rows with a
+  normalized payload, the raw provider response, and a SHA-256 hash. Failed
+  attempts are recorded in a new `registry_check_log` table, never as a
+  snapshot. The first snapshot of any kind never generates a change event
+  (baseline only); an unchanged repeat never creates a duplicate event.
+- Weekly monitoring runs as a plain in-process `setInterval` (hourly sweep,
+  immediate catch-up run on startup) over active (`subcontractors.active`),
+  due (`nextCheckAt`) Danish suppliers only, with overlap guards so a sweep
+  already in progress is a no-op and one supplier's failure never blocks
+  another's check. Manual "Sync with Danish registry" reuses the exact same
+  `checkDanishSupplier()` routine.
+- Added `GET /api/settings/companydata-status` — a safe status endpoint
+  returning exactly `{ country, basicLookupConfigured, financialEnrichmentConfigured }`,
+  never inspecting or exposing the key's value.
+- Frontend: added Denmark to the country dropdown and to `RegistryLookupSummary`'s
+  displayed fields (added `Employees` and `Contact phone` rows, both already
+  returned by every provider's normalized record but not previously
+  displayed for any country).
+- **Bug found and fixed during live verification**: APICVR's name-search
+  endpoint doesn't rank by relevance — searching "Novo Nordisk" buried the
+  actual pharmaceutical company (CVR 24256790, 27,975 employees) at position
+  27 of 30 results under unrelated clubs/foundations sharing the name (e.g.
+  "Novo Nordisk Kunstforening"), so it never appeared in the app's
+  8-result suggestion list. Fixed the same way Norway's identical ranking bug
+  was fixed earlier in this project: fetch a larger page (`limit=50`) and
+  rank exact/prefix matches first before truncating to 8.
+- **Bug found and fixed while testing**: `companyDataUsage.recordCompanyDataCall()`
+  did a separate read-then-write, which raced when financials/ownership/management
+  enrichment call it concurrently (`Promise.all` in `denmarkEnrichment.ts`) —
+  the first CompanyData call of a new calendar month could hit a UNIQUE
+  constraint violation on `month`, silently absorbed by the enrichment
+  pipeline's per-data-type error handling as if CompanyData itself had
+  failed. Fixed with a single atomic `insert().onConflictDoUpdate()` upsert.
+- **Bug found and fixed while testing**: `registrySnapshotStore.getLatestSnapshot()`
+  ordered only by `fetchedAt`, which is second-resolution (SQLite's
+  `unixepoch()`) — two snapshots saved within the same second tied, and the
+  "latest" one returned was non-deterministic. Fixed by breaking ties on the
+  table's insertion-order `rowid`.
+- Attempted to split `db/schema.ts` (now 280 lines) into smaller modules per
+  the file-size rule, but reverted: this project's `.js`-suffixed
+  NodeNext-style relative imports aren't resolved by drizzle-kit 0.24.2's
+  schema loader across separate files (confirmed — `drizzle-kit generate`
+  fails with `MODULE_NOT_FOUND` on any such split), and the only real fix is
+  a multi-minor-version drizzle-kit upgrade, which is a larger, unrelated,
+  riskier change than a modest line-count overage on a flat, untangled list
+  of table declarations. Documented the reasoning directly in `schema.ts`.
+
+### Files changed
+
+- New: `backend/src/services/registryProviders/denmark.ts`,
+  `denmarkMapper.ts` — APICVR provider (lookup/search/CVR validation) and its
+  response mapper.
+- New: `backend/src/services/companyData.ts`, `companyDataMapper.ts`,
+  `companyDataUsage.ts` — CompanyData.dk client, response mappers, and local
+  monthly call-count tracking (500/month Basic-plan quota).
+- New: `backend/src/services/registrySnapshotStore.ts` — shared
+  snapshot/check-log read/write helpers (`hashOf`, `getLatestSnapshot`,
+  `saveSnapshot`, `logCheckResult`).
+- New: `backend/src/services/denmarkEnrichment.ts` — CompanyData
+  fetch→snapshot→apply→diff→event pipeline, one data type at a time,
+  fully error-isolated per data type.
+- New: `backend/src/services/denmarkMonitoring.ts` — `checkDanishSupplier()`,
+  the one shared Danish-check routine for manual sync and weekly monitoring.
+- New: `backend/src/services/denmarkScheduler.ts` — hourly in-process sweep
+  with startup catch-up and overlap guards.
+- Modified: `backend/src/db/schema.ts` — added `active`,
+  `lastCheckAttemptedAt`, `nextCheckAt` to `subcontractors`; added
+  `provider`/`dataType`/`hash` to `registrySnapshots` (all nullable —
+  NO/GB unaffected); new `registry_check_log` and `companydata_usage` tables.
+- New migration: `backend/drizzle/0003_past_spencer_smythe.sql` (additive
+  only — new columns/tables, no data loss, applied to the real `dev.db`).
+- Modified: `backend/src/services/registryProviders/index.ts` — registered
+  `denmarkProvider`; `diffSnapshots()` gained an optional `extraFields`
+  parameter (default `[]`, so NO/GB/UK are unaffected) so Denmark can also
+  watch legal form and registration date.
+- Modified: `backend/src/services/registryPersistence.ts` — added
+  `persistInitialRegistryData()` (Denmark-specific create-time snapshot
+  tagging + enrichment + next-check scheduling) and `syncGenericRegistry()`
+  (the pre-existing NO/GB sync body, moved verbatim to keep
+  `subcontractors.ts` under the line limit).
+- Modified: `backend/src/routes/subcontractors.ts` — create/sync routes
+  branch to the Danish path; NO/GB paths unchanged.
+- Modified: `backend/src/routes/settings.ts` — added
+  `GET /api/settings/companydata-status`.
+- Modified: `backend/src/index.ts` — starts the Denmark scheduler after
+  `app.listen()`.
+- Modified: `backend/.env.example` — added `COMPANYDATA_DK_API_KEY=`
+  placeholder (real key goes only in the untracked `backend/.env`, never
+  committed).
+- Modified: `backend/package.json` — test script now also picks up
+  `src/services/*.test.ts` (previously only its `registryProviders`
+  subdirectory).
+- Modified: `frontend/src/types.ts` — added `contactPhone?: string` to
+  `RegistryLookupResult` (already returned by every provider, not previously
+  typed).
+- Modified: `frontend/src/components/RegistryCompanySearch.tsx` — added
+  Denmark to `COUNTRY_NAMES`.
+- Modified: `frontend/src/components/RegistryLookupSummary.tsx` — added
+  "Employees" and "Contact phone" rows.
+
+### Tests added
+
+Backend — `registryProviders/denmark.test.ts` (14): CVR validation; leading
+zero preserved through the numeric `vat` round-trip; phone withheld when
+`protected: true` and shown otherwise; CVR-format rejected before any network
+call; APICVR's HTTP-200-with-error-body treated as not-found; outage (5xx)
+distinguished from not-found; network failure propagated; partial numeric
+query never sent to name search; exact 8-digit query resolved via lookup, not
+name search; empty result for a nonexistent exact CVR; Danish characters
+passed through untouched; **relevance ranking regression test** (the company
+the query names ranks above unrelated same-name clubs/foundations); outage
+distinguished from no-match on search; network failure propagated on search.
+
+Backend — `companyDataUsage.test.ts` (3): fresh month has zero calls;
+`recordCompanyDataCall` increments; `nearingQuota` flips at 90% of quota.
+
+Backend — `companyData.test.ts` (8): safe status shape with/without a key,
+key value never present in the JSON; missing key throws 400 with zero network
+calls; 401/403 never leak the key; 404 distinguished from a rejected key; 429
+surfaces `Retry-After` with no retry loop; network failure reported
+distinctly; a successful call is counted against the quota; a successful call
+returns both normalized data and untouched raw response.
+
+Backend — `registrySnapshotStore.test.ts` (5): `hashOf` determinism;
+untagged (NO/GB-style) snapshot round-trip; tagged snapshots for the same
+supplier never collide with each other or an untagged one; `saveSnapshot`'s
+returned hash matches; `logCheckResult` never creates a snapshot row.
+
+Backend — `denmarkEnrichment.test.ts` (5): unconfigured key is a no-op with
+zero network calls; first-ever enrichment applies data with no events
+(baseline); a real change produces exactly one event per changed data type;
+an unchanged repeat produces no duplicate events; one data type failing never
+blocks the other two.
+
+Backend — `denmarkMonitoring.test.ts` (5): a successful check stamps
+attempted/checked/next-check timestamps (~7 days out); Denmark's extra
+watched fields (legal form, registration date) detect a change; an unchanged
+repeat produces no duplicate events; an APICVR failure is logged and thrown,
+never swallowed; checking a nonexistent subcontractor throws 404.
+
+Backend — `denmarkScheduler.test.ts` (3): only active, due, Danish suppliers
+are checked (inactive/not-due/wrong-country all skipped); an overlapping
+call is a no-op, never a duplicate check; one supplier's failure doesn't
+block another's check in the same sweep.
+
+Frontend — `AddSubcontractorModal.denmark.test.tsx` (5): Denmark listed by
+name in the country dropdown; selecting Denmark searches the Danish registry;
+picking a suggestion fills in the CVR and auto-triggers the lookup; the
+confirmation panel shows employee count and contact phone; a genuine registry
+outage is shown as an error, never as an empty result.
+
+### Validation results
+
+- Backend tests: 68/68 passed (26 pre-existing NO/UK/team tests unaffected +
+  42 new).
+- Backend TypeScript build (`tsc`) and production build: passed.
+- Frontend tests: 29/29 passed (24 pre-existing + 5 new).
+- Frontend TypeScript build and production build (`vite build`): passed.
+- `drizzle-kit generate` against the current schema: "No schema changes,
+  nothing to migrate" (confirms the schema.ts revert introduced no drift).
+- Migration `0003_past_spencer_smythe.sql` applied cleanly to the real local
+  `dev.db` (additive only).
+- Live APICVR verification (both direct API calls and driven through the
+  actual running frontend in a headless browser): searched "Novo Nordisk" via
+  `GET /api/registry/search/DK`, selected the correct top-ranked result
+  (NOVO NORDISK A/S, CVR 24256790), which auto-triggered
+  `GET /api/registry/lookup/DK/24256790` and correctly displayed "Company
+  found: NOVO NORDISK A/S" with Employees: 27975 and Contact phone: 44448888.
+- `GET /api/settings/companydata-status` confirmed live:
+  `{"country":"DK","basicLookupConfigured":true,"financialEnrichmentConfigured":false}`
+  — Denmark's basic search/lookup work fully without a CompanyData key;
+  financial/ownership/management enrichment correctly reports as awaiting
+  configuration, not as Denmark being unavailable.
+- Estimated CompanyData.dk call usage once a key is added: 3 calls per
+  Danish supplier per check (financials + ownership + management) — 1 call
+  at creation, then 1 more per weekly monitoring cycle per active Danish
+  supplier. At the 500/month Basic-plan quota, that comfortably supports
+  roughly 35–40 actively-monitored Danish suppliers checked weekly, tracked
+  locally via `companydata_usage` with a warning at 90% (450 calls/month).
+- Test subcontractor (`NOVO NORDISK A/S`, CVR 24256790, id
+  `bb08cfa1-f29a-4e76-9aba-d29aa8467afe`) created during manual verification
+  was removed from the real `dev.db` via a one-off script, deleted
+  immediately after use (never committed); the pre-existing `TESCO PLC` and
+  `EQUINOR ASA` records were untouched.
+- No `.env`, secrets, `dev.db`, or temporary test databases were committed;
+  `backend/package.json`'s test glob was the only non-source change needed
+  to make the new backend tests run under `npm test`.
+
+### Next steps for the user
+
+- To activate CompanyData.dk financial/ownership/management enrichment, add
+  your key to `backend/.env` (not `.env.example`) as
+  `COMPANYDATA_DK_API_KEY=<your key>`, then restart the backend — no code
+  changes needed. Denmark's company search/lookup already work fully without
+  it. Please don't paste the key into chat.
+
+### Delivery
+
+- Commit: pending.
+- Pull request: pending.
+- Merge: pending.
