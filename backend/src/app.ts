@@ -10,6 +10,7 @@ import { settingsRouter } from "./routes/settings.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { registryRouter } from "./routes/registry.js";
 import { reportsRouter } from "./routes/reports.js";
+import { riskAssessmentRouter } from "./routes/riskAssessment.js";
 
 // Builds the Express app without starting it or touching migrations, so
 // tests can import it directly (e.g. with supertest) against a database of
@@ -22,6 +23,7 @@ export function createApp() {
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
   app.use("/api/subcontractors", subcontractorsRouter);
+  app.use("/api/subcontractors", riskAssessmentRouter);
   app.use("/api/events", eventsRouter);
   app.use("/api/tasks", tasksRouter);
   app.use("/api/notes", notesRouter);

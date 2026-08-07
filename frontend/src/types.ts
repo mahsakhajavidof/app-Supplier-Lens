@@ -113,6 +113,9 @@ export interface Subcontractor {
   contactPhone?: string | null;
   aiSummary?: string | null;
   lastCheckedAt: string;
+  lastCheckAttemptedAt?: string | null;
+  nextCheckAt?: string | null;
+  active: boolean;
   owner?: TeamMember | null;
   events: EventRecord[];
   tasks?: TaskRecord[];
@@ -184,4 +187,57 @@ export interface ReportType {
   id: string;
   title: string;
   desc: string;
+}
+
+// What GET /api/subcontractors/:id/risk-assessment returns — see
+// backend/src/services/riskAssessment/*.ts for how each part is computed.
+export interface CalculatedMetric {
+  key: string;
+  label: string;
+  value: number | null;
+  unit: "percent" | "ratio";
+  calculable: boolean;
+  reason?: string;
+  periodLabel: string;
+  calculatedBySupplierLens: true;
+}
+
+export type IndicatorStatus = "Positive" | "Neutral" | "Attention" | "High attention";
+
+export interface RiskIndicator {
+  key: string;
+  title: string;
+  status: IndicatorStatus;
+  observedValue: string;
+  comparisonPeriod: string;
+  whyItMatters: string;
+  source: string;
+  retrievedAt: string;
+  ruleUsed: string;
+  isInformationGap: boolean;
+}
+
+export interface NegotiationSuggestion {
+  key: string;
+  category: string;
+  guidance: string;
+  evidenceSummary: string;
+  basedOnIndicatorKey: string;
+}
+
+export type DecisionStatus = "Not reviewed" | "Accepted" | "Not relevant" | "Resolved";
+
+export interface IndicatorDecision {
+  indicatorKey: string;
+  status: DecisionStatus;
+  note?: string | null;
+  decidedAt: string;
+  decidedBy: { id: string; name: string } | null;
+}
+
+export interface RiskAssessment {
+  metrics: CalculatedMetric[];
+  indicators: RiskIndicator[];
+  guidance: NegotiationSuggestion[];
+  decisions: IndicatorDecision[];
 }

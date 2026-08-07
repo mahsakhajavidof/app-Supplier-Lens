@@ -18,6 +18,20 @@ export const STATUS_CLASSES: Record<string, string> = {
   "No action needed": "bg-neutral-bg text-neutral-fg",
 };
 
+// Risk-indicator statuses (never an official rating) and the decision
+// statuses a team member records against one — reusing the same warn/danger
+// palette as the rest of the app rather than introducing new colors.
+export const RISK_STATUS_CLASSES: Record<string, string> = {
+  Positive: "bg-neutral-bg text-neutral-fg",
+  Neutral: "bg-neutral-bg text-neutral-fg",
+  Attention: "bg-warn-bg text-warn-fg",
+  "High attention": "bg-danger-bg text-danger-fg",
+  "Not reviewed": "bg-neutral-bg text-neutral-fg",
+  Accepted: "bg-surface-chip text-link",
+  "Not relevant": "bg-neutral-bg text-neutral-fg",
+  Resolved: "bg-surface-chip text-link",
+};
+
 export function badgeClass(label: string): string {
-  return ATTENTION_CLASSES[label] ?? STATUS_CLASSES[label] ?? "bg-neutral-bg text-neutral-fg";
+  return ATTENTION_CLASSES[label] ?? STATUS_CLASSES[label] ?? RISK_STATUS_CLASSES[label] ?? "bg-neutral-bg text-neutral-fg";
 }

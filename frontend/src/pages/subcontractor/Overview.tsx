@@ -2,7 +2,7 @@ import type { Subcontractor } from "../../types";
 import { Badge } from "../../components/Badge";
 import { Card, CardHeader } from "../../components/Card";
 import { Button } from "../../components/Button";
-import { formatDate, daysUntil } from "../../lib/format";
+import { formatDate, daysUntil, formatDateTime } from "../../lib/format";
 
 export function Overview({ sub, onGoTimeline }: { sub: Subcontractor; onGoTimeline: () => void }) {
   const latestEvents = sub.events.slice(0, 4);
@@ -101,6 +101,24 @@ export function Overview({ sub, onGoTimeline }: { sub: Subcontractor; onGoTimeli
               <div key={label as string} className="flex justify-between gap-4 border-b border-border py-2.5 text-[12.5px] last:border-b-0">
                 <span className="text-muted">{label}</span>
                 <span className="text-right font-medium">{value ?? "—"}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="mb-3.5 text-[15px] font-semibold">Monitoring &amp; procurement</h2>
+          <div className="flex flex-col">
+            {[
+              ["Category", sub.category],
+              ["Internal responsible", sub.owner?.name ?? "Unassigned"],
+              ["Monitoring status", sub.active ? "Active" : "Inactive"],
+              ["Last checked", formatDateTime(sub.lastCheckedAt)],
+              ["Next scheduled check", sub.nextCheckAt ? formatDateTime(sub.nextCheckAt) : "—"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-4 border-b border-border py-2.5 text-[12.5px] last:border-b-0">
+                <span className="text-muted">{label}</span>
+                <span className="text-right font-medium">{value}</span>
               </div>
             ))}
           </div>
