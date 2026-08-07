@@ -18,14 +18,20 @@ import type {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers as Record<string, string> | undefined) },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(body.error ?? `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
+}
+
+// Manager-only routes require identifying the acting team member — see
+// frontend/src/lib/currentUser.ts and backend/src/lib/permissions.ts.
+function actingHeaders(actingUserId: string): Record<string, string> {
+  return { "x-team-member-id": actingUserId };
 }
 
 export const api = {
@@ -53,6 +59,12 @@ export const api = {
         `/subcontractors/${id}/sync`,
         { method: "POST" }
       ),
+    updateOwner: (id: string, ownerId: string, actingUserId: string) =>
+      request<Subcontractor>(`/subcontractors/${id}`, {
+        method: "PATCH",
+        headers: actingHeaders(actingUserId),
+        body: JSON.stringify({ ownerId }),
+      }),
   },
 
   events: {
@@ -92,6 +104,22 @@ export const api = {
     sources: () => request<Source[]>("/settings/sources"),
     toggleSource: (id: string) => request<Source>(`/settings/sources/${id}`, { method: "PATCH" }),
     team: () => request<TeamMember[]>("/settings/team"),
+    addTeamMember: (body: { name: string; role: string; email?: string }, actingUserId: string) =>
+      request<TeamMember>("/settings/team", {
+        method: "POST",
+        headers: actingHeaders(actingUserId),
+        body: JSON.stringify(body),
+      }),
+    updateTeamMember: (
+      id: string,
+      body: Partial<{ name: string; role: string; email: string | null; active: boolean; reassignToId: string }>,
+      actingUserId: string
+    ) =>
+      request<TeamMember>(`/settings/team/${id}`, {
+        method: "PATCH",
+        headers: actingHeaders(actingUserId),
+        body: JSON.stringify(body),
+      }),
     registries: () => request<RegistryProviderStatus[]>("/settings/registries"),
   },
 

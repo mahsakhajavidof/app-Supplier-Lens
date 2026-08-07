@@ -62,7 +62,7 @@ export function TaskModal({
         <Field label="Assigned employee">
           <select className={inputClass} value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Unassigned</option>
-            {team?.map((m) => (
+            {team?.filter((m) => m.active).map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>

@@ -190,3 +190,16 @@ describe("AddSubcontractorModal category selection", () => {
     expect(api.subcontractors.create).not.toHaveBeenCalledWith(expect.objectContaining({ category: "Other" }));
   });
 });
+
+describe("AddSubcontractorModal assigned employee", () => {
+  test("the Assigned employee dropdown lists only active team members", async () => {
+    vi.mocked(api.settings.team).mockResolvedValue([
+      { id: "1", name: "Active One", email: null, role: "Team member", initials: "AO", active: true },
+      { id: "2", name: "Inactive One", email: null, role: "Team member", initials: "IO", active: false },
+    ]);
+    renderModal();
+
+    await screen.findByText("Active One");
+    expect(screen.queryByText("Inactive One")).toBeNull();
+  });
+});

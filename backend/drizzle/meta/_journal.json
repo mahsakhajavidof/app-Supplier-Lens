@@ -15,6 +15,13 @@
       "when": 1785935767758,
       "tag": "0001_small_sway",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786094729271,
+      "tag": "0002_harsh_natasha_romanoff",
+      "breakpoints": true
     }
   ]
 }
