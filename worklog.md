@@ -1128,6 +1128,7 @@ negotiation brief fetches and displays the document.
 
 ### Delivery
 
-- Commit: pending.
-- Pull request: pending.
-- Merge: pending.
+- Commit: `ee36a4a` on branch `codex/risk-assessment-negotiation-guidance`
+  (squash-merged as `c3babf4`).
+- Pull request: #13, merged into `main`.
+- Merge: done.
