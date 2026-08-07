@@ -452,6 +452,7 @@ create → query invalidation → filters refetch).
 
 ### Delivery
 
-- Commit: pending (written before commit, per rule 4).
-- Pull request: pending.
-- Merge: pending.
+- Commit: `9f95e55` on branch `codex/category-dropdown` (squash-merged as
+  `8af9ecb`).
+- Pull request: #9, merged into `main`.
+- Merge: done.
