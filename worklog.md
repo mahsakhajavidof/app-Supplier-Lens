@@ -639,6 +639,7 @@ dropdown lists only active team members.
 
 ### Delivery
 
-- Commit: pending (written before commit, per rule 4).
-- Pull request: pending.
-- Merge: pending.
+- Commit: `9c74bbc` on branch `codex/team-member-cleanup` (squash-merged as
+  `00bba47`).
+- Pull request: #10, merged into `main`.
+- Merge: done.
