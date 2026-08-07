@@ -29,6 +29,13 @@
       "when": 1786100692963,
       "tag": "0003_past_spencer_smythe",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786105434339,
+      "tag": "0004_light_talisman",
+      "breakpoints": true
     }
   ]
 }

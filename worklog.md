@@ -933,3 +933,201 @@ outage is shown as an error, never as an empty result.
   `79afbdc`).
 - Pull request: #12, merged into `main`.
 - Merge: done.
+
+## 2026-08-07 — Explainable financial-risk assessment and negotiation guidance
+
+### Summary
+
+- Confirmed the "complete baseline company profile" requirement was already
+  met: `GET /api/subcontractors/:id` already returns identity, financials,
+  people, ownership, events, tasks, notes and documents immediately after
+  creation for every country (populated from the registry lookup at create
+  time), never waiting for a change event. Added the two genuinely missing
+  display pieces — monitoring status (active/inactive, last checked, next
+  scheduled check) and a procurement overview (category, internal
+  responsible) — to the existing Overview tab, reusing fields already on the
+  `subcontractors` row.
+- Added a deterministic financial-metrics engine
+  (`riskAssessment/financialMetrics.ts`): revenue growth, operating margin,
+  result-before-tax margin, headcount change, and an implied-leverage ratio
+  derived from the already-reported equity ratio. Every metric returns
+  `calculable: false` with a plain-language reason instead of guessing —
+  never divides by zero, never compares two periods reported in different
+  currencies, and is explicitly typed `calculatedBySupplierLens: true` so it
+  can never be confused with a raw reported figure in the API response
+  itself.
+- Added a risk-indicator engine (`riskAssessment/indicators.ts` +
+  `indicatorsQualitative.ts`) evaluating 10 indicators — liquidity, equity
+  position, revenue trend, leverage, headcount trend, repeated losses,
+  accounts recency, ownership/management/auditor changes (read from existing
+  monitoring events), customer/revenue dependency, and strong financial
+  performance — each returning status (Positive/Neutral/Attention/High
+  attention), observed value, comparison period, why it matters, source,
+  retrieval date, and the exact rule applied. All thresholds live in one file
+  (`riskAssessment/thresholds.ts`). Missing data always produces an explicit
+  "information gap" (`isInformationGap: true`), never treated as evidence of
+  weakness — `dependency_risk` is always an information gap, since no
+  connected data source reports customer concentration. Never uses
+  CompanyData's proprietary score or any invented credit score — every
+  status comes from Supplier Lens's own documented thresholds applied to
+  reported or calculated figures.
+- Added a deterministic negotiation/due-diligence guidance generator
+  (`riskAssessment/negotiationGuidance.ts`): template-based (no external AI
+  call, no API key), one suggestion per Attention/High-attention/Positive
+  indicator plus surfaced information gaps, every suggestion phrased as
+  something to ask/discuss/request and always carrying an `evidenceSummary`
+  tying it back to the specific indicator. States "No meaningful issue was
+  identified" explicitly when nothing warrants a suggestion.
+- Added a deterministic negotiation-brief generator
+  (`riskAssessment/negotiationBrief.ts`) assembling the same indicators and
+  guidance into a markdown document, plus
+  `GET /api/subcontractors/:id/risk-assessment/brief`.
+- Added append-only decision tracking (`riskIndicatorDecisions.ts` +
+  `risk_indicator_decisions` table): Not reviewed/Accepted/Not
+  relevant/Resolved, with an optional note that becomes **required** when
+  dismissing ("Not relevant") an indicator that is currently Attention or
+  High attention — enforced server-side in the route, not just the UI.
+  Changing a decision inserts a new row rather than overwriting, so history
+  is never lost; the most recent row per (supplier, indicator) is the
+  "current" decision.
+- Added a "Convert to task" workflow: creates a real follow-up task (the
+  same `tasks` table and follow-up workflow used everywhere else) with a new
+  nullable `source_indicator_key` column linking it back to the indicator
+  that generated it, pre-filled with that indicator's own evidence text.
+- New frontend "Risk assessment" tab on the subcontractor profile page:
+  calculated metrics (explicitly labeled, separate from reported figures),
+  one card per indicator with every required field plus inline decision
+  controls and a "Convert to task" button, a negotiation-guidance list, and
+  a "Generate negotiation brief" viewer with a download-as-.md option.
+  Explicitly labeled "Not an official rating. Not an automatic accept/reject
+  decision." in the UI itself.
+- Attempted to split `db/schema.ts` further (now 325 lines, needed to add the
+  new table); per the same drizzle-kit 0.24.2 loader limitation documented
+  during the Denmark work (confirmed again, and the user explicitly chose to
+  keep the file as one file rather than upgrade the dependency), it stays a
+  single file.
+
+### Files changed
+
+- New: `backend/src/services/riskAssessment/financialMetrics.ts`,
+  `thresholds.ts`, `indicatorTypes.ts`, `indicators.ts`,
+  `indicatorsQualitative.ts`, `negotiationGuidance.ts`,
+  `negotiationBrief.ts`, `assemble.ts` — the full deterministic engine.
+- New: `backend/src/services/riskIndicatorDecisions.ts` — append-only
+  decision persistence.
+- New: `backend/src/routes/riskAssessment.ts` — `GET .../risk-assessment`,
+  `GET .../risk-assessment/brief`,
+  `POST .../risk-assessment/indicators/:key/decision`,
+  `POST .../risk-assessment/indicators/:key/convert-to-task`.
+- Modified: `backend/src/db/schema.ts` — new `risk_indicator_decisions`
+  table; new nullable `tasks.source_indicator_key` column.
+- New migration: `backend/drizzle/0004_light_talisman.sql` (additive only).
+- Modified: `backend/src/app.ts` — mounted the new router.
+- Modified: `backend/src/lib/labels.ts` — added `RISK_DECISION_LABELS` and
+  `serializeDecision`, following the existing label-mapping pattern.
+- Modified: `backend/package.json` — test script now also picks up
+  `src/services/riskAssessment/*.test.ts`.
+- New: `frontend/src/components/RiskIndicatorCard.tsx`,
+  `NegotiationBriefModal.tsx`.
+- New: `frontend/src/pages/subcontractor/RiskAssessment.tsx` — the new tab.
+- Modified: `frontend/src/pages/SubcontractorProfile.tsx` — registered the
+  new tab.
+- Modified: `frontend/src/pages/subcontractor/Overview.tsx` — added the
+  monitoring-status/procurement-overview card.
+- Modified: `frontend/src/lib/api.ts` — added `riskAssessment.{get, brief,
+  decide, convertToTask}`.
+- Modified: `frontend/src/lib/badges.ts` — added `RISK_STATUS_CLASSES` for
+  the new indicator/decision status labels, reusing the existing palette.
+- Modified: `frontend/src/types.ts` — added `CalculatedMetric`,
+  `RiskIndicator`, `NegotiationSuggestion`, `IndicatorDecision`,
+  `RiskAssessment` types; added `lastCheckAttemptedAt`/`nextCheckAt`/`active`
+  to `Subcontractor` (already returned by the API, not previously typed).
+
+### Tests added
+
+Backend — `financialMetrics.test.ts` (13): correct revenue-growth
+calculation; not calculable with fewer than two periods; not calculable when
+prior revenue is zero; not calculable on a currency change between periods;
+not calculable when revenue is missing; operating margin calculation and
+its zero-revenue guard; result-before-tax margin calculation; headcount
+change calculation and its zero-prior-headcount guard; implied leverage
+calculation and its missing-equity-ratio guard; `computeFinancialMetrics`
+never throws on an empty financial history.
+
+Backend — `indicators.test.ts` (15): liquidity High attention/Attention/
+Neutral/information-gap boundaries; negative equity forces High attention;
+revenue trend High attention on a sharp decline and Positive on strong
+growth; leverage Attention boundary; headcount-decline Attention; repeated
+losses only High attention when both of the two latest years are negative;
+accounts recency Neutral vs High attention by age; governance-change
+detection inside vs outside the lookback window; dependency risk is always
+an information gap; strong-financials Positive only when both growth and
+margin clear their thresholds.
+
+Backend — `negotiationGuidance.test.ts` (6): guidance references its
+evidence; Positive indicators are framed as opportunities; surfaced
+information gaps are framed as questions; "no meaningful issue" is stated
+explicitly when nothing warrants a suggestion; **guardrail sweep** — no
+generated text for any indicator/status combination ever contains
+accusatory, legal-conclusion, or discriminatory language; every real
+suggestion carries a `basedOnIndicatorKey`.
+
+Backend — `riskIndicatorDecisions.test.ts` (4): a decision is recorded with
+its status and note; `getCurrentDecisions` returns the most recent row per
+indicator, not the first; changing a decision preserves history rather than
+overwriting it; decisions for different indicators never collide.
+
+Backend — `riskAssessment.test.ts` route tests (8, real HTTP against a
+throwaway database): 404 for an unknown subcontractor; a low liquidity
+ratio is correctly reflected as Attention; dismissing an Attention indicator
+as not relevant without a note is rejected (400); the same dismissal with a
+note succeeds and is reflected on the next read, with the human-readable
+label (not the raw enum); a non-dismissal decision never requires a note;
+converting an indicator to a task creates a task linked via
+`source_indicator_key`, pre-filled with its evidence; the negotiation brief
+names the supplier and its indicators; acting on an unknown indicator key
+returns 404, not a silent success.
+
+Frontend — `RiskAssessment.test.tsx` (8): calculated metrics are labeled as
+calculated by Supplier Lens; a non-calculable metric shows its reason
+instead of a number; an indicator card shows its evidence and rule used,
+explicitly not an official rating; negotiation guidance shows its evidence;
+dismissing an Attention indicator as not relevant without a note is blocked
+client-side; accepting an indicator saves without requiring a note;
+converting to a task calls the API with the indicator key; generating the
+negotiation brief fetches and displays the document.
+
+### Validation results
+
+- Backend tests: 114/114 passed (68 pre-existing + 46 new).
+- Backend TypeScript build and production build: passed.
+- Frontend tests: 37/37 passed (29 pre-existing + 8 new).
+- Frontend TypeScript build and production build: passed.
+- `drizzle-kit generate`: "No schema changes, nothing to migrate" (confirms
+  no drift after the schema additions).
+- Migration `0004_light_talisman.sql` applied cleanly to the real local
+  `dev.db` (additive only — new table, new nullable column).
+- Live verification through the actual running frontend (headless browser):
+  opened EQUINOR ASA's real profile, navigated to the new Risk assessment
+  tab, confirmed the calculated-metrics section, all 10 indicator cards, and
+  the negotiation-guidance list rendered correctly against real
+  Brønnøysundregisteret financial data (liquidity ratio 1.07 correctly
+  flagged Attention; a 2-year-old filing correctly flagged accounts
+  recency). No console/network errors beyond the same pre-existing, unrelated
+  missing-favicon 404 already noted in the Denmark work.
+- Live-verified the decision workflow via direct API calls before the UI
+  test: dismissing the liquidity indicator as "Not relevant" without a note
+  was correctly rejected (400), succeeded with a note, and converting the
+  accounts-recency indicator to a task correctly created a task with
+  `source_indicator_key` set and evidence-based comment text. Both test
+  artifacts were then removed from the real `dev.db` via a one-off script
+  (deleted immediately after use, never committed) — the database now holds
+  only the same two pre-existing suppliers (`TESCO PLC`, `EQUINOR ASA`) as
+  before this task, with no leftover decisions or tasks.
+- No `.env`, secrets, `dev.db`, or temporary test databases were committed.
+
+### Delivery
+
+- Commit: pending.
+- Pull request: pending.
+- Merge: pending.

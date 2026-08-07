@@ -14,6 +14,7 @@ import { Overview } from "./subcontractor/Overview";
 import { Timeline } from "./subcontractor/Timeline";
 import { CompanyInfo } from "./subcontractor/CompanyInfo";
 import { Financials } from "./subcontractor/Financials";
+import { RiskAssessment } from "./subcontractor/RiskAssessment";
 import { Documents } from "./subcontractor/Documents";
 import { Notes } from "./subcontractor/Notes";
 import { FollowUp } from "./subcontractor/FollowUp";
@@ -23,6 +24,7 @@ const TABS = [
   { key: "timeline", label: "Change timeline" },
   { key: "company", label: "Company information" },
   { key: "finance", label: "Financial information" },
+  { key: "risk", label: "Risk assessment" },
   { key: "docs", label: "Documents" },
   { key: "notes", label: "Internal notes" },
   { key: "follow", label: "Follow-up" },
@@ -154,6 +156,7 @@ export function SubcontractorProfile() {
         {tab === "timeline" && <Timeline sub={sub} onReviewed={invalidate} />}
         {tab === "company" && <CompanyInfo sub={sub} />}
         {tab === "finance" && <Financials sub={sub} />}
+        {tab === "risk" && <RiskAssessment sub={sub} />}
         {tab === "docs" && <Documents sub={sub} onChanged={invalidate} />}
         {tab === "notes" && <Notes sub={sub} onChanged={invalidate} />}
         {tab === "follow" && <FollowUp sub={sub} onNewTask={() => setModal("task")} />}

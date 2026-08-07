@@ -103,6 +103,11 @@ export const tasks = sqliteTable("tasks", {
     .notNull()
     .references(() => subcontractors.id, { onDelete: "cascade" }),
   eventId: text("event_id").references(() => events.id),
+  // Set when this task was created from a risk indicator suggestion rather
+  // than a registry-change event — see riskAssessment/indicators.ts for the
+  // set of possible keys. Free-text, not a FK: indicators are computed live,
+  // not stored rows, so there is nothing in the database to reference.
+  sourceIndicatorKey: text("source_indicator_key"),
   ownerId: text("owner_id").references(() => teamMembers.id),
   due: integer("due", { mode: "timestamp" }),
   priority: text("priority", { enum: ["LOW", "NORMAL", "HIGH"] }).notNull().default("NORMAL"),
@@ -227,6 +232,29 @@ export const companyDataUsage = sqliteTable("companydata_usage", {
   callCount: integer("call_count").notNull().default(0),
 });
 
+// A team member's decision on one risk indicator suggestion for one
+// supplier. Risk indicators themselves are computed live from current data
+// (see riskAssessment/indicators.ts), not stored — `indicatorKey` is the
+// stable slug identifying which rule this decision is about. Append-only:
+// changing a decision inserts a new row rather than overwriting, so history
+// is preserved; the "current" decision is the most recent row for a given
+// (subcontractorId, indicatorKey) pair.
+export const riskIndicatorDecisions = sqliteTable("risk_indicator_decisions", {
+  id: id(),
+  subcontractorId: text("subcontractor_id")
+    .notNull()
+    .references(() => subcontractors.id, { onDelete: "cascade" }),
+  indicatorKey: text("indicator_key").notNull(),
+  status: text("status", {
+    enum: ["NOT_REVIEWED", "ACCEPTED", "NOT_RELEVANT", "RESOLVED"],
+  })
+    .notNull()
+    .default("NOT_REVIEWED"),
+  note: text("note"),
+  decidedById: text("decided_by_id").references(() => teamMembers.id),
+  decidedAt: integer("decided_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 // --- Relations (enables db.query.subcontractors.findMany({ with: {...} })) --
 
 export const teamMembersRelations = relations(teamMembers, ({ many }) => ({
@@ -247,6 +275,7 @@ export const subcontractorsRelations = relations(subcontractors, ({ one, many })
   owners: many(ownerships),
   snapshots: many(registrySnapshots),
   checkLogs: many(registryCheckLog),
+  riskIndicatorDecisions: many(riskIndicatorDecisions),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -288,4 +317,9 @@ export const registrySnapshotsRelations = relations(registrySnapshots, ({ one })
 
 export const registryCheckLogRelations = relations(registryCheckLog, ({ one }) => ({
   subcontractor: one(subcontractors, { fields: [registryCheckLog.subcontractorId], references: [subcontractors.id] }),
+}));
+
+export const riskIndicatorDecisionsRelations = relations(riskIndicatorDecisions, ({ one }) => ({
+  subcontractor: one(subcontractors, { fields: [riskIndicatorDecisions.subcontractorId], references: [subcontractors.id] }),
+  decidedBy: one(teamMembers, { fields: [riskIndicatorDecisions.decidedById], references: [teamMembers.id] }),
 }));

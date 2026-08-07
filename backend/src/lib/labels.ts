@@ -29,6 +29,13 @@ export const TASK_PRIORITY_LABELS = {
   HIGH: "High",
 } as const;
 
+export const RISK_DECISION_LABELS = {
+  NOT_REVIEWED: "Not reviewed",
+  ACCEPTED: "Accepted",
+  NOT_RELEVANT: "Not relevant",
+  RESOLVED: "Resolved",
+} as const;
+
 export type AttentionKey = keyof typeof ATTENTION_LABELS;
 export type FollowUpKey = keyof typeof FOLLOW_UP_LABELS;
 export type TaskStatusKey = keyof typeof TASK_STATUS_LABELS;
@@ -53,4 +60,8 @@ export function serializeTask<T extends { status: string; priority: string; even
     priority: label(TASK_PRIORITY_LABELS, t.priority),
     event: t.event ? serializeEvent(t.event as { attention: string; followUp: string }) : t.event,
   };
+}
+
+export function serializeDecision<T extends { status: string }>(d: T) {
+  return { ...d, status: label(RISK_DECISION_LABELS, d.status) };
 }

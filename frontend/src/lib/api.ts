@@ -10,6 +10,7 @@ import type {
   RegistryProviderStatus,
   RegistrySearchResult,
   ReportType,
+  RiskAssessment,
   Source,
   Subcontractor,
   TaskRecord,
@@ -64,6 +65,29 @@ export const api = {
         method: "PATCH",
         headers: actingHeaders(actingUserId),
         body: JSON.stringify({ ownerId }),
+      }),
+  },
+
+  riskAssessment: {
+    get: (subcontractorId: string) => request<RiskAssessment>(`/subcontractors/${subcontractorId}/risk-assessment`),
+    brief: (subcontractorId: string) => request<{ brief: string }>(`/subcontractors/${subcontractorId}/risk-assessment/brief`),
+    decide: (
+      subcontractorId: string,
+      indicatorKey: string,
+      body: { status: "NOT_REVIEWED" | "ACCEPTED" | "NOT_RELEVANT" | "RESOLVED"; note?: string; decidedById?: string }
+    ) =>
+      request(`/subcontractors/${subcontractorId}/risk-assessment/indicators/${encodeURIComponent(indicatorKey)}/decision`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    convertToTask: (
+      subcontractorId: string,
+      indicatorKey: string,
+      body: { ownerId?: string; due?: string; priority?: "LOW" | "NORMAL" | "HIGH" }
+    ) =>
+      request<TaskRecord>(`/subcontractors/${subcontractorId}/risk-assessment/indicators/${encodeURIComponent(indicatorKey)}/convert-to-task`, {
+        method: "POST",
+        body: JSON.stringify(body),
       }),
   },
 
