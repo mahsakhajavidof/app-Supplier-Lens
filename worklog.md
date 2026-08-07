@@ -700,6 +700,7 @@ active manager exists in the data.
 
 ### Delivery
 
-- Commit: pending (written before commit, per rule 4).
-- Pull request: pending.
-- Merge: pending.
+- Commit: `cfffffe` on branch `codex/fix-sidebar-demo-name` (squash-merged as
+  `cd3e87a`).
+- Pull request: #11, merged into `main`.
+- Merge: done.
